@@ -3,19 +3,19 @@ Import necessary libraries to create a generative adversarial network
 The code is developed using the PyTorch library
 """
 import pickle
-from numpy.random import randn
 import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-from torchvision.transforms import transforms
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler
 import joblib
-import matplotlib.pyplot as plt
+from sdv.evaluation import evaluate
+
+from statistics import mean
 
 """
 Network Architectures
@@ -26,12 +26,12 @@ The following are the discriminator and generator architectures
 class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
-        self.fc1 = nn.Linear(419, 512)
+        self.fc1 = nn.Linear(310, 512)
         self.fc2 = nn.Linear(512, 1)
         self.activation = nn.LeakyReLU(0.1)
 
     def forward(self, x):
-        x = x.view(-1, 419)
+        x = x.view(-1, 310)
         x = self.activation(self.fc1(x))
         x = self.fc2(x)
         return nn.Sigmoid()(x)
@@ -42,42 +42,45 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.fc1 = nn.Linear(128, 1024)
         self.fc2 = nn.Linear(1024, 2048)
-        self.fc3 = nn.Linear(2048, 419)
+        self.fc3 = nn.Linear(2048, 310)
         self.activation = nn.ReLU()
 
     def forward(self, x):
         x = self.activation(self.fc1(x))
         x = self.activation(self.fc2(x))
         x = self.fc3(x)
-        x = x.view(-1, 1, 1, 419)
+        x = x.view(-1, 1, 1, 310)
         return nn.Tanh()(x)
 
 
 def prepare_data(data, batch_size):
     df = pd.DataFrame(data)
-    # convert labels from string to 0 and 1
+    # Convert labels from string to 0 and 1
     df['label'] = df['label'].map({'human': 0, 'bot': 1, 'cyborg': 1})
     # Convert features that are boolean to integers
     df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
-    y = df['label']
+
+    # keep only bot accounts to train our GAN
+    bots_df = df[df['label'] == 1]
+    y = bots_df['label']
 
     # Drop unwanted columns
-    df = df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
-    df = df.drop(df.columns[264], axis=1)
+    bots_df = bots_df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
+    if 'max_appearance_of_punc_mark' in bots_df.columns:
+        bots_df = bots_df.drop(['max_appearance_of_punc_mark'], axis=1)
 
     # Scale our data in the range of (0, 1)
     scaler = MinMaxScaler()
-    df_scaled = scaler.fit_transform(X=df)
+    df_scaled = scaler.fit_transform(X=bots_df)
 
-    # store scaler for later use
+    # Store scaler for later use
     scaler_filename = "scaler.save"
     joblib.dump(scaler, scaler_filename)
-
 
     # Transform dataframe into pytorch Tensor
     train = TensorDataset(torch.Tensor(df_scaled), torch.Tensor(np.array(y)))
     train_loader = DataLoader(dataset=train, batch_size=batch_size, shuffle=True)
-    return train_loader
+    return train_loader, bots_df
 
 
 def train_gan():
@@ -102,8 +105,8 @@ def train_gan():
     D_optimizer = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
 
     # Load our data
-    bot_data = pickle.load(open('final_data', 'rb'))
-    train_loader = prepare_data(bot_data, batch_size=bs)
+    bot_data = pickle.load(open('final_data_no_rts_v2', 'rb'))
+    train_loader, train_df = prepare_data(bot_data, batch_size=bs)
 
     """
     Network training procedure
@@ -112,8 +115,9 @@ def train_gan():
     Generator aims to generate bot accounts as realistic as possible
     """
     for epoch in range(epochs):
-        predictions = []
-        ground_truth = []
+        acc = []
+        mean_D_loss = []
+        mean_G_loss = []
         for idx, (train_batch, _) in enumerate(train_loader):
             idx += 1
 
@@ -128,21 +132,23 @@ def train_gan():
             real_outputs = D(real_inputs)
             real_label = torch.ones(real_inputs.shape[0], 1).to(device)
 
-            # make a batch of fake images using Generator
-            # feed fake images to Discriminator, compute loss
+            # Make a batch of fake samples using Generator
+            # Feed fake samples to Discriminator
             noise = (torch.rand(real_inputs.shape[0], 128) - 0.5) / 0.5
             noise = noise.to(device)
             fake_inputs = G(noise)
             fake_outputs = D(fake_inputs)
             fake_label = torch.zeros(fake_inputs.shape[0], 1).to(device)
 
-            # combine the two loss values
+            # Combine the two loss values
             # use combined loss to update Discriminator
             outputs = torch.cat((real_outputs, fake_outputs), 0)
             targets = torch.cat((real_label, fake_label), 0)
 
-            # predictions.append(outputs)
-            # ground_truth.append(targets)
+            # Just for evaluation and print purposes
+            predictions = outputs.cpu().detach().numpy()
+            predictions = np.round(predictions)
+            labels = targets.cpu().detach().numpy()
 
             D_loss = loss(outputs, targets)
             D_optimizer.zero_grad()
@@ -154,9 +160,8 @@ def train_gan():
             noise = (torch.rand(real_inputs.shape[0], 128) - 0.5) / 0.5
             noise = noise.to(device)
 
-            # make a batch of fake images using Generator
-            # feed fake images to Discriminator, compute reverse loss
-            # use reverse loss to update Generator
+            # Make a batch of fake samples using Generator
+            # Feed fake samples to Discriminator, compute reverse loss and use it to update the Generator
             fake_inputs = G(noise)
             fake_outputs = D(fake_inputs)
             fake_targets = torch.ones([fake_inputs.shape[0], 1]).to(device)
@@ -165,16 +170,22 @@ def train_gan():
             G_loss.backward()
             G_optimizer.step()
 
-            if idx % 10 == 0 or idx == len(train_loader):
-                print('Epoch {} Iteration {}: discriminator_loss {:.4f} generator_loss {:.4f}'.format(epoch, idx,
-                                                                                                      D_loss.item(),
-                                                                                                      G_loss.item()))
+            if idx % 100 == 0 or idx == len(train_loader):
+                # print('Epoch {} - Iteration {}: discriminator_loss {:.4f} generator_loss {:.4f}'.format(epoch, idx, D_loss.item(), G_loss.item()))
 
-        # if (epoch + 1) % 10 == 0:
-        # D_accuracy = accuracy_score(ground_truth, predictions)
-        # print('Epoch {} -- Discriminator Accuracy {:.5f}'.format(epoch, D_accuracy))
-    torch.save(G, 'Generator_save.pth'.format(epoch))
+                mean_D_loss.append(D_loss.item())
+                mean_G_loss.append(G_loss.item())
+                D_accuracy = accuracy_score(labels, predictions)
+                acc.append(D_accuracy)
+
+        print('Epoch {} -- Discriminator mean Accuracy: {:.5f}'.format(epoch, mean(acc)))
+        print('Epoch {} -- Discriminator mean loss: {:.5f}'.format(epoch, mean(mean_D_loss)))
+        print('Epoch {} -- Generator mean loss: {:.5f}'.format(epoch, mean(mean_G_loss)))
+        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+
+    torch.save(G, 'Generator_save.pth')
     print('Generator saved.')
+    return train_df
 
 
 """
@@ -182,11 +193,11 @@ A function that loads a trained Generator model and uses it to create synthetic 
 """
 
 
-def generate_synthetic_samples(num_of_samples=100, num_of_features=419):
+def generate_synthetic_samples(num_of_samples=100, num_of_features=310):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     generator = torch.load('Generator_save.pth')
-    # generate points in the latent space
+    # Generate points in the latent space
     noise = (torch.rand(num_of_samples, 128) - 0.5) / 0.5
     noise = noise.to(device)
 
@@ -200,11 +211,12 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=419):
     # Load saved min_max_scaler for inverse transformation of the generated data
     scaler = joblib.load("scaler.save")
     synthetic_data = scaler.inverse_transform(synthetic_samples)
-    return synthetic_samples
+    return synthetic_data
 
 
-#train_gan()
+real_data = train_gan()
 
-synthetic_data = generate_synthetic_samples()
-
+synthetic_data = generate_synthetic_samples(num_of_samples=248)
+synthetic_data = pd.DataFrame(synthetic_data)
+print('Data evaluation: {}'.format(evaluate(synthetic_data, real_data)))
 print(synthetic_data)
