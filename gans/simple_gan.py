@@ -2,6 +2,7 @@
 Import necessary libraries to create a generative adversarial network
 The code is developed using the PyTorch library
 """
+import os
 import pickle
 import time
 import torch
@@ -13,9 +14,14 @@ import pandas as pd
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler
 import joblib
+import matplotlib.pyplot as plt
 from sdv.evaluation import evaluate
-
+from sdv.metrics.tabular import KSTest
 from statistics import mean
+import warnings
+import seaborn as sns
+
+warnings.filterwarnings('ignore')
 
 """
 Network Architectures
@@ -26,8 +32,8 @@ The following are the discriminator and generator architectures
 class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
-        self.fc1 = nn.Linear(310, 512)
-        self.fc2 = nn.Linear(512, 1)
+        self.fc1 = nn.Linear(310, 400)
+        self.fc2 = nn.Linear(400, 1)
         self.activation = nn.LeakyReLU(0.1)
 
     def forward(self, x):
@@ -40,9 +46,9 @@ class Discriminator(nn.Module):
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
-        self.fc1 = nn.Linear(128, 1024)
-        self.fc2 = nn.Linear(1024, 2048)
-        self.fc3 = nn.Linear(2048, 310)
+        self.fc1 = nn.Linear(128, 500)
+        self.fc2 = nn.Linear(500, 1000)
+        self.fc3 = nn.Linear(1000, 310)
         self.activation = nn.ReLU()
 
     def forward(self, x):
@@ -50,13 +56,15 @@ class Generator(nn.Module):
         x = self.activation(self.fc2(x))
         x = self.fc3(x)
         x = x.view(-1, 1, 1, 310)
-        return nn.Tanh()(x)
+        return nn.Sigmoid()(x)
 
 
-def prepare_data(data, batch_size):
+
+def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_size=64):
     df = pd.DataFrame(data)
     # Convert labels from string to 0 and 1
     df['label'] = df['label'].map({'human': 0, 'bot': 1, 'cyborg': 1})
+    #df = df.sample(n=100)
     # Convert features that are boolean to integers
     df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
 
@@ -80,10 +88,10 @@ def prepare_data(data, batch_size):
     # Transform dataframe into pytorch Tensor
     train = TensorDataset(torch.Tensor(df_scaled), torch.Tensor(np.array(y)))
     train_loader = DataLoader(dataset=train, batch_size=batch_size, shuffle=True)
-    return train_loader, bots_df
+    return train_loader, bots_df, pd.DataFrame(df_scaled)
 
 
-def train_gan():
+def train_gan(epochs=100):
     """
     Determine if any GPUs are available
     """
@@ -92,7 +100,6 @@ def train_gan():
     """
     Hyperparameter settings
     """
-    epochs = 150
     lr = 2e-4
     bs = 64
     loss = nn.BCELoss()
@@ -105,8 +112,7 @@ def train_gan():
     D_optimizer = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
 
     # Load our data
-    bot_data = pickle.load(open('final_data_no_rts_v2', 'rb'))
-    train_loader, train_df = prepare_data(bot_data, batch_size=bs)
+    train_loader, _, _ = prepare_data(batch_size=bs)
 
     """
     Network training procedure
@@ -114,10 +120,14 @@ def train_gan():
     Discriminator aims to classify reals and fakes
     Generator aims to generate bot accounts as realistic as possible
     """
+    mean_D_loss = []
+    mean_G_loss = []
+    D_acc = []
     for epoch in range(epochs):
         acc = []
-        mean_D_loss = []
-        mean_G_loss = []
+        epoch_D_loss = []
+        epoch_G_loss = []
+
         for idx, (train_batch, _) in enumerate(train_loader):
             idx += 1
 
@@ -145,7 +155,7 @@ def train_gan():
             outputs = torch.cat((real_outputs, fake_outputs), 0)
             targets = torch.cat((real_label, fake_label), 0)
 
-            # Just for evaluation and print purposes
+            # Just for evaluation and monitoring purposes
             predictions = outputs.cpu().detach().numpy()
             predictions = np.round(predictions)
             labels = targets.cpu().detach().numpy()
@@ -171,21 +181,39 @@ def train_gan():
             G_optimizer.step()
 
             if idx % 100 == 0 or idx == len(train_loader):
-                # print('Epoch {} - Iteration {}: discriminator_loss {:.4f} generator_loss {:.4f}'.format(epoch, idx, D_loss.item(), G_loss.item()))
-
-                mean_D_loss.append(D_loss.item())
-                mean_G_loss.append(G_loss.item())
+                epoch_D_loss.append(D_loss.item())
+                epoch_G_loss.append(G_loss.item())
                 D_accuracy = accuracy_score(labels, predictions)
                 acc.append(D_accuracy)
 
         print('Epoch {} -- Discriminator mean Accuracy: {:.5f}'.format(epoch, mean(acc)))
-        print('Epoch {} -- Discriminator mean loss: {:.5f}'.format(epoch, mean(mean_D_loss)))
-        print('Epoch {} -- Generator mean loss: {:.5f}'.format(epoch, mean(mean_G_loss)))
+        print('Epoch {} -- Discriminator mean loss: {:.5f}'.format(epoch, mean(epoch_D_loss)))
+        print('Epoch {} -- Generator mean loss: {:.5f}'.format(epoch, mean(epoch_G_loss)))
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        mean_D_loss.append(mean(epoch_D_loss))
+        mean_G_loss.append(mean(epoch_G_loss))
+        D_acc.append(mean(acc))
+
+    # loss plots
+    plt.figure(figsize=(10, 7))
+    plt.plot(mean_D_loss, color='blue', label='Discriminator loss')
+    plt.plot(mean_G_loss, color='red', label='Generator loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig('D:\Desktop\Adversarial-Learning-in-Social-Bot_Detection\gan_loss.png')
+    plt.show()
+
+    plt.figure(figsize=(10, 7))
+    plt.plot(D_acc, color='blue', label='Discriminator accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.savefig('D:\Desktop\Adversarial-Learning-in-Social-Bot_Detection\discriminator_acc.png')
+    plt.show()
 
     torch.save(G, 'Generator_save.pth')
     print('Generator saved.')
-    return train_df
 
 
 """
@@ -195,6 +223,11 @@ A function that loads a trained Generator model and uses it to create synthetic 
 
 def generate_synthetic_samples(num_of_samples=100, num_of_features=310):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # Load initial data
+    _, real_data, real_data_scaled = prepare_data()
+    # Return only the columns with integers
+    df_ints = real_data.select_dtypes(include=['int64'])
 
     generator = torch.load('Generator_save.pth')
     # Generate points in the latent space
@@ -211,12 +244,24 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310):
     # Load saved min_max_scaler for inverse transformation of the generated data
     scaler = joblib.load("scaler.save")
     synthetic_data = scaler.inverse_transform(synthetic_samples)
-    return synthetic_data
+    synthetic_data = pd.DataFrame(data=synthetic_data, columns=real_data.columns)
+
+    # Transform float to int where necessary
+    #synthetic_data = synthetic_data.applymap(lambda x: round(x) if x.name in df_ints.columns else x)
+    pickle.dump(synthetic_data, open('synthetic_data_' + str(num_of_samples), 'wb'))
+    return synthetic_data, real_data
 
 
-real_data = train_gan()
+train_gan(epochs=300)
 
-synthetic_data = generate_synthetic_samples(num_of_samples=248)
-synthetic_data = pd.DataFrame(synthetic_data)
-print('Data evaluation: {}'.format(evaluate(synthetic_data, real_data)))
+
+#sns.displot(real_data, x="followers_count", col='followers_count')
+#plt.show()
+
+synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000)
+
+ks = KSTest.compute(synthetic_data, real_data)
+print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
+kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 print(synthetic_data)
