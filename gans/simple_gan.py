@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from sdv.evaluation import evaluate
 from sdv.metrics.tabular import KSTest
 from statistics import mean
+from sklearn.model_selection import train_test_split
 import warnings
 import seaborn as sns
 
@@ -59,17 +60,24 @@ class Generator(nn.Module):
         return nn.Sigmoid()(x)
 
 
-
 def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_size=64):
     df = pd.DataFrame(data)
     # Convert labels from string to 0 and 1
     df['label'] = df['label'].map({'human': 0, 'bot': 1, 'cyborg': 1})
-    #df = df.sample(n=100)
+    # df = df.sample(n=100)
     # Convert features that are boolean to integers
     df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
 
+    # Keep 20% of the data for later testing
+    train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
+    # Drop unwanted columns
+    test_set = test_set.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
+    if 'max_appearance_of_punc_mark' in test_set.columns:
+        test_set = test_set.drop(['max_appearance_of_punc_mark'], axis=1)
+
+    pickle.dump(test_set, open('test_data', 'wb'))
     # keep only bot accounts to train our GAN
-    bots_df = df[df['label'] == 1]
+    bots_df = train_set[train_set['label'] == 0]
     y = bots_df['label']
 
     # Drop unwanted columns
@@ -247,21 +255,26 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310):
     synthetic_data = pd.DataFrame(data=synthetic_data, columns=real_data.columns)
 
     # Transform float to int where necessary
-    #synthetic_data = synthetic_data.applymap(lambda x: round(x) if x.name in df_ints.columns else x)
+    # synthetic_data = synthetic_data.applymap(lambda x: round(x) if x.name in df_ints.columns else x)
     pickle.dump(synthetic_data, open('synthetic_data_' + str(num_of_samples), 'wb'))
     return synthetic_data, real_data
 
 
+def evaluate_synthetic_data():
+    synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000)
+    ks = KSTest.compute(synthetic_data, real_data)
+    print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
+    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+    print(synthetic_data)
+
+
 train_gan(epochs=300)
+evaluate_synthetic_data()
+
+# sns.displot(real_data, x="followers_count", col='followers_count')
+# plt.show()
 
 
-#sns.displot(real_data, x="followers_count", col='followers_count')
-#plt.show()
 
-synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000)
 
-ks = KSTest.compute(synthetic_data, real_data)
-print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
-kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
-print(synthetic_data)
