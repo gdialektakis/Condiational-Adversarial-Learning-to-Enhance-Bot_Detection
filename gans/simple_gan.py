@@ -60,37 +60,40 @@ class Generator(nn.Module):
         return nn.Sigmoid()(x)
 
 
-def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_size=64):
+def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_size=64, bots=True):
     df = pd.DataFrame(data)
     # Convert labels from string to 0 and 1
     df['label'] = df['label'].map({'human': 0, 'bot': 1, 'cyborg': 1})
     # df = df.sample(n=100)
-    # Convert features that are boolean to integers
-    df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
 
     # Keep 20% of the data for later testing
     train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
-    # Drop unwanted columns
-    test_set = test_set.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
-    if 'max_appearance_of_punc_mark' in test_set.columns:
-        test_set = test_set.drop(['max_appearance_of_punc_mark'], axis=1)
 
-    pickle.dump(test_set, open('test_data', 'wb'))
-    # keep only bot accounts to train our GAN
-    bots_df = train_set[train_set['label'] == 0]
-    y = bots_df['label']
+    pickle.dump(test_set, open('simple_gan/test_data', 'wb'))
+
+    # Convert features that are boolean to integers
+    df = train_set.applymap(lambda x: int(x) if isinstance(x, bool) else x)
+
+    if bots:
+        # keep only bot accounts to train our GAN
+        df = df[df['label'] == 1]
+    else:
+        # keep only human accounts to train our GAN
+        df = df[df['label'] == 0]
+
+    y = df['label']
 
     # Drop unwanted columns
-    bots_df = bots_df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
-    if 'max_appearance_of_punc_mark' in bots_df.columns:
-        bots_df = bots_df.drop(['max_appearance_of_punc_mark'], axis=1)
+    df = df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
+    if 'max_appearance_of_punc_mark' in df.columns:
+        df = df.drop(['max_appearance_of_punc_mark'], axis=1)
 
     # Scale our data in the range of (0, 1)
     scaler = MinMaxScaler()
-    df_scaled = scaler.fit_transform(X=bots_df)
+    df_scaled = scaler.fit_transform(X=df)
 
     # Store scaler for later use
-    scaler_filename = "scaler.save"
+    scaler_filename = "simple_gan/scaler.save"
     joblib.dump(scaler, scaler_filename)
 
     # Transform dataframe into pytorch Tensor
@@ -99,7 +102,7 @@ def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_siz
     return train_loader, bots_df, pd.DataFrame(df_scaled)
 
 
-def train_gan(epochs=100):
+def train_gan(epochs=100, bots=True):
     """
     Determine if any GPUs are available
     """
@@ -209,7 +212,7 @@ def train_gan(epochs=100):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig('D:\Desktop\Adversarial-Learning-in-Social-Bot_Detection\gan_loss.png')
+    plt.savefig('simple_gan/gan_loss.png')
     plt.show()
 
     plt.figure(figsize=(10, 7))
@@ -217,10 +220,14 @@ def train_gan(epochs=100):
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.savefig('D:\Desktop\Adversarial-Learning-in-Social-Bot_Detection\discriminator_acc.png')
+    plt.savefig('simple_gan/discriminator_acc.png')
     plt.show()
 
-    torch.save(G, 'Generator_save.pth')
+    # Save Generator with the appropriate name
+    if bots:
+        torch.save(G, 'simple_gan/Bot_Generator_save.pth')
+    else:
+        torch.save(G, 'simple_gan/Human_Generator_save.pth')
     print('Generator saved.')
 
 
@@ -229,15 +236,18 @@ A function that loads a trained Generator model and uses it to create synthetic 
 """
 
 
-def generate_synthetic_samples(num_of_samples=100, num_of_features=310):
+def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=True):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load initial data
     _, real_data, real_data_scaled = prepare_data()
-    # Return only the columns with integers
-    df_ints = real_data.select_dtypes(include=['int64'])
 
-    generator = torch.load('Generator_save.pth')
+    # Load the appropriate Generator
+    if bots:
+        generator = torch.load('simple_gan/Bot_Generator_save.pth')
+    else:
+        generator = torch.load('simple_gan/Human_Generator_save.pth')
+
     # Generate points in the latent space
     noise = (torch.rand(num_of_samples, 128) - 0.5) / 0.5
     noise = noise.to(device)
@@ -250,13 +260,16 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310):
     synthetic_samples = synthetic_samples.reshape(num_of_samples, num_of_features)
 
     # Load saved min_max_scaler for inverse transformation of the generated data
-    scaler = joblib.load("scaler.save")
+    scaler = joblib.load("simple_gan/scaler.save")
+
     synthetic_data = scaler.inverse_transform(synthetic_samples)
     synthetic_data = pd.DataFrame(data=synthetic_data, columns=real_data.columns)
 
-    # Transform float to int where necessary
-    # synthetic_data = synthetic_data.applymap(lambda x: round(x) if x.name in df_ints.columns else x)
-    pickle.dump(synthetic_data, open('synthetic_data_' + str(num_of_samples), 'wb'))
+    if bots:
+        pickle.dump(synthetic_data, open('simple_gan/synthetic_bot_data_' + str(num_of_samples), 'wb'))
+    else:
+        pickle.dump(synthetic_data, open('simple_gan/synthetic_human_data_' + str(num_of_samples), 'wb'))
+
     return synthetic_data, real_data
 
 
@@ -269,12 +282,8 @@ def evaluate_synthetic_data():
     print(synthetic_data)
 
 
-train_gan(epochs=300)
-evaluate_synthetic_data()
-
-# sns.displot(real_data, x="followers_count", col='followers_count')
-# plt.show()
-
-
-
+train_loader, bots_df, df = prepare_data(bots=True)
+#train_gan(epochs=300)
+synthetic_data, real_data = generate_synthetic_samples(bots=True)
+#evaluate_synthetic_data()
 

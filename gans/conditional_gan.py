@@ -80,50 +80,24 @@ class Generator(nn.Module):
         return out.view(-1, 1, 1, self.num_features)
 
 
-def plot_histogram(data):
-    save_dir = "D:\Desktop\Adversarial-Learning-in-Social-Bot_Detection\histograms"
-    branches = ['followers_count', 'tweets_count', 'favorites_count', 'verified', 'tweet_posting_rate_per_day']
-
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-
-    num_bins = 200
-    for kk in range(0, 5):
-        df = data[branches[kk]]
-        n_hist_data, bin_edges, _ = plt.hist(data[branches[kk]], color='blue', bins=num_bins, range=(df.min(), df.max()))
-        plt.xlabel(xlabel=branches[kk])
-        plt.ylabel('Number of accounts')
-        plt.suptitle(branches[kk])
-
-        plt.savefig(os.path.join(save_dir, branches[kk] + '.png'))
-
-    plt.figure()
-    plt.show()
-
-
 def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_size=64):
     df = pd.DataFrame(data)
 
-    df = df.sample(n=1000)
+    #df = df.sample(n=1000)
 
     # Convert labels from string to 0 and 1
     df['label'] = df['label'].map({'human': 0, 'bot': 1, 'cyborg': 1})
-    # Convert features that are boolean to integers
-    df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
 
     # Keep 20% of the data for later testing
     train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
-    # Drop unwanted columns
-    test_set = test_set.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
-    if 'max_appearance_of_punc_mark' in test_set.columns:
-        test_set = test_set.drop(['max_appearance_of_punc_mark'], axis=1)
+    pickle.dump(test_set, open('conditional_gan/test_data', 'wb'))
 
-    pickle.dump(test_set, open('test_data', 'wb'))
-
-    y = train_set['label']
+    # Convert features that are boolean to integers
+    df = train_set.applymap(lambda x: int(x) if isinstance(x, bool) else x)
+    y = df['label']
 
     # Drop unwanted columns
-    df = train_set.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
+    df = df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
     if 'max_appearance_of_punc_mark' in df.columns:
         df = df.drop(['max_appearance_of_punc_mark'], axis=1)
 
@@ -132,7 +106,7 @@ def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_siz
     df_scaled = scaler.fit_transform(X=df)
 
     # Store scaler for later use
-    scaler_filename = "scaler.save"
+    scaler_filename = "conditional_gan/scaler.save"
     joblib.dump(scaler, scaler_filename)
 
     # Transform dataframe into pytorch Tensor
@@ -255,7 +229,7 @@ def train_gan(epochs=100):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig('D:\Desktop\Adversarial-Learning-in-Social-Bot_Detection\cond_gan_loss.png')
+    plt.savefig('conditional_gan/cond_gan_loss.png')
     plt.show()
 
     plt.figure(figsize=(10, 7))
@@ -263,10 +237,10 @@ def train_gan(epochs=100):
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.savefig('D:\Desktop\Adversarial-Learning-in-Social-Bot_Detection\cond_discriminator_acc.png')
+    plt.savefig('conditional_gan/cond_discriminator_acc.png')
     plt.show()
 
-    torch.save(G, 'Conditional_Generator_save.pth')
+    torch.save(G, 'conditional_gan/Conditional_Generator_save.pth')
     print('Generator saved.')
 
 
@@ -281,10 +255,11 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     # Load initial data
     _, real_data, real_data_scaled = prepare_data()
 
-    generator = torch.load('Conditional_Generator_save.pth')
+    generator = torch.load('conditional_gan/Conditional_Generator_save.pth')
     # Generate points in the latent space
     noise = (torch.rand(num_of_samples, 128) - 0.5) / 0.5
     noise = noise.to(device)
+
     # Create class labels
     if bots:
         class_labels = torch.randint(1, num_of_classes, (num_of_samples,)).to(device)
@@ -301,29 +276,26 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     class_labels = class_labels.reshape(num_of_samples, 1)
 
     # Load saved min_max_scaler for inverse transformation of the generated data
-    scaler = joblib.load("scaler.save")
+    scaler = joblib.load("conditional_gan/scaler.save")
     synthetic_data = scaler.inverse_transform(synthetic_samples)
     synthetic_data = pd.DataFrame(data=synthetic_data, columns=real_data.columns)
 
+    synthetic_samples = synthetic_data.copy(deep=True)
     # Insert column containing labels
     synthetic_data.insert(loc=310, column='label', value=class_labels, allow_duplicates=True)
+    if bots:
+        pickle.dump(synthetic_data, open('conditional_gan/synthetic_bot_data_' + str(num_of_samples), 'wb'))
+    else:
+        pickle.dump(synthetic_data, open('conditional_gan/synthetic_human_data_' + str(num_of_samples), 'wb'))
 
-    # Transform float to int where necessary
-    #synthetic_data = synthetic_data.applymap(lambda x: round(x) if x.name in df_ints.columns else x)
-    pickle.dump(synthetic_data, open('synthetic_data_' + str(num_of_samples), 'wb'))
-    return synthetic_data, real_data
-
-
-#train_gan(epochs=10)
+    return synthetic_samples, real_data
 
 
+train_gan(epochs=300)
 
-#sns.displot(real_data, x="followers_count", col='followers_count')
-#plt.show()
-#plot_histogram(real_data)
 
-synthetic_data, real_data = generate_synthetic_samples(num_of_samples=1000)
-
+synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000, bots=True)
+print('Data have been generated')
 ks = KSTest.compute(synthetic_data, real_data)
 print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
 kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
