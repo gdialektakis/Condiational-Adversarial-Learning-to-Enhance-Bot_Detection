@@ -80,7 +80,7 @@ class Generator(nn.Module):
         return out.view(-1, 1, 1, self.num_features)
 
 
-def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_size=64):
+def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_size=64, bots=True):
     df = pd.DataFrame(data)
 
     #df = df.sample(n=1000)
@@ -97,9 +97,17 @@ def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_siz
     y = df['label']
 
     # Drop unwanted columns
-    df = df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
+    df = df.drop(['user_name', 'user_screen_name', 'user_id'], axis=1)
     if 'max_appearance_of_punc_mark' in df.columns:
         df = df.drop(['max_appearance_of_punc_mark'], axis=1)
+
+    if bots:
+        df_filtered = df[df['label'] == 1]
+    else:
+        df_filtered = df[df['label'] == 0]
+
+    df = df.drop(['label'], axis=1)
+    df_filtered = df_filtered.drop(['label'], axis=1)
 
     # Scale our data in the range of (0, 1)
     scaler = MinMaxScaler()
@@ -112,7 +120,7 @@ def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_siz
     # Transform dataframe into pytorch Tensor
     train = TensorDataset(torch.Tensor(df_scaled), torch.Tensor(np.array(y)))
     train_loader = DataLoader(dataset=train, batch_size=batch_size, shuffle=True)
-    return train_loader, df, pd.DataFrame(df_scaled)
+    return train_loader, df, pd.DataFrame(df_scaled), df_filtered
 
 
 def train_gan(epochs=100):
@@ -136,7 +144,7 @@ def train_gan(epochs=100):
     D_optimizer = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
 
     # Load our data
-    train_loader, _, _ = prepare_data(batch_size=bs)
+    train_loader, _, _, _ = prepare_data(batch_size=bs)
 
     """
     Network training procedure
@@ -253,9 +261,9 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load initial data
-    _, real_data, real_data_scaled = prepare_data()
+    _, _, _, real_data = prepare_data(bots=bots)
 
-    generator = torch.load('conditional_gan/Conditional_Generator_save.pth')
+    generator = torch.load('conditional_gan/Conditional_Generator_save_800.pth')
     # Generate points in the latent space
     noise = (torch.rand(num_of_samples, 128) - 0.5) / 0.5
     noise = noise.to(device)
@@ -291,10 +299,12 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     return synthetic_samples, real_data
 
 
-train_gan(epochs=300)
+#train_gan(epochs=300)
 
 
 synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000, bots=True)
+
+
 print('Data have been generated')
 ks = KSTest.compute(synthetic_data, real_data)
 print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))

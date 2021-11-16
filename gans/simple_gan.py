@@ -99,7 +99,7 @@ def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_siz
     # Transform dataframe into pytorch Tensor
     train = TensorDataset(torch.Tensor(df_scaled), torch.Tensor(np.array(y)))
     train_loader = DataLoader(dataset=train, batch_size=batch_size, shuffle=True)
-    return train_loader, bots_df, pd.DataFrame(df_scaled)
+    return train_loader, df, pd.DataFrame(df_scaled)
 
 
 def train_gan(epochs=100, bots=True):
@@ -240,7 +240,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=Tru
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load initial data
-    _, real_data, real_data_scaled = prepare_data()
+    _, real_data, real_data_scaled = prepare_data(bots=bots)
 
     # Load the appropriate Generator
     if bots:
@@ -273,8 +273,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=Tru
     return synthetic_data, real_data
 
 
-def evaluate_synthetic_data():
-    synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000)
+def evaluate_synthetic_data(synthetic_data, real_data):
     ks = KSTest.compute(synthetic_data, real_data)
     print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
     kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
@@ -282,8 +281,7 @@ def evaluate_synthetic_data():
     print(synthetic_data)
 
 
-train_loader, bots_df, df = prepare_data(bots=True)
-#train_gan(epochs=300)
-synthetic_data, real_data = generate_synthetic_samples(bots=True)
-#evaluate_synthetic_data()
+#train_gan(epochs=300, bots=False)
+synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000, bots=False)
+evaluate_synthetic_data(synthetic_data, real_data)
 
