@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from sdv.evaluation import evaluate
 from sdv.metrics.tabular import KSTest
 from statistics import mean
+import helper_scripts.transform_booleans as transform_bool
 import warnings
 import seaborn as sns
 
@@ -81,7 +82,7 @@ class Generator(nn.Module):
 
 
 def prepare_data(df=pickle.load(open('multi_class_data', 'rb')), batch_size=64):
-    # df = df.sample(n=1000)
+    df = df.sample(n=1000)
 
     # Keep 20% of the data for later testing
     train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
@@ -96,6 +97,7 @@ def prepare_data(df=pickle.load(open('multi_class_data', 'rb')), batch_size=64):
     if 'max_appearance_of_punc_mark' in df.columns:
         df = df.drop(['max_appearance_of_punc_mark'], axis=1)
 
+    df.to_csv('df_columns')
     # Scale our data in the range of (0, 1)
     scaler = MinMaxScaler()
     df_scaled = scaler.fit_transform(X=df)
@@ -276,16 +278,16 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     synthetic_samples = synthetic_data.copy(deep=True)
     # Insert column containing labels
     synthetic_data.insert(loc=310, column='label', value=class_labels, allow_duplicates=True)
-
+    synthetic_data = transform_bool.transform(synthetic_data)
     pickle.dump(synthetic_data, open('conditional_gan_multi/synthetic_data_' + str(num_of_samples), 'wb'))
 
     return synthetic_samples, real_data
 
 
-# train_gan(epochs=300)
+#train_gan(epochs=300)
 
 
-synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000)
+synthetic_data, real_data = generate_synthetic_samples(num_of_samples=3000)
 
 print('Data have been generated')
 ks = KSTest.compute(synthetic_data, real_data)

@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from sdv.evaluation import evaluate
 from sdv.metrics.tabular import KSTest
 from statistics import mean
+import helper_scripts.transform_booleans as transform_bool
 import warnings
 import seaborn as sns
 
@@ -291,6 +292,9 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     synthetic_samples = synthetic_data.copy(deep=True)
     # Insert column containing labels
     synthetic_data.insert(loc=310, column='label', value=class_labels, allow_duplicates=True)
+
+    synthetic_data = transform_bool.transform(synthetic_data)
+
     if bots:
         pickle.dump(synthetic_data, open('conditional_gan/synthetic_bot_data_' + str(num_of_samples), 'wb'))
     else:
@@ -306,6 +310,12 @@ synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000, bot
 
 
 print('Data have been generated')
+
+"""
+This metric uses the two-sample Kolmogorov–Smirnov test to compare the distributions of 
+continuous columns using the empirical CDF. The output for each column is 1 minus the KS Test D statistic, 
+which indicates the maximum distance between the expected CDF and the observed CDF values.
+"""
 ks = KSTest.compute(synthetic_data, real_data)
 print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
 kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])

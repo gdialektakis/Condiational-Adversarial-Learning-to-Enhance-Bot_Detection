@@ -19,6 +19,9 @@ from sdv.evaluation import evaluate
 from sdv.metrics.tabular import KSTest
 from statistics import mean
 from sklearn.model_selection import train_test_split
+from sdv.metrics.tabular import BNLikelihood, BNLogLikelihood, GMLogLikelihood
+from sdv.metrics.tabular import LogisticDetection, SVCDetection
+import helper_scripts.transform_booleans as transform_bool
 import warnings
 import seaborn as sns
 
@@ -265,6 +268,8 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=Tru
     synthetic_data = scaler.inverse_transform(synthetic_samples)
     synthetic_data = pd.DataFrame(data=synthetic_data, columns=real_data.columns)
 
+    synthetic_data = transform_bool.transform(synthetic_data)
+
     if bots:
         pickle.dump(synthetic_data, open('simple_gan/synthetic_bot_data_' + str(num_of_samples), 'wb'))
     else:
@@ -274,14 +279,60 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=Tru
 
 
 def evaluate_synthetic_data(synthetic_data, real_data):
+
+    ############# Statistical Metrics #############
+    print('\n~~~~~~~~~ Statistical Metrics ~~~~~~~~~\n')
+
+    """
+    This metric uses the two-sample Kolmogorov–Smirnov test to compare the distributions of
+    continuous columns using the empirical CDF. The output for each column is 1 minus the KS Test D statistic,
+    which indicates the maximum distance between the expected CDF and the observed CDF values.
+    """
     ks = KSTest.compute(synthetic_data, real_data)
     print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
-    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+
+    ############# Likelihood Metrics #############
+    print('\n~~~~~~~~~ Likelihood Metrics ~~~~~~~~~\n')
+    """
+        This metric fits a BayesianNetwork to the real data and 
+        then evaluates the average likelihood of the rows from the synthetic data on it.
+    """
+    bnl_likelihood = BNLikelihood.compute(real_data, synthetic_data)
+    print('\nBNLikelihood: {}'.format(BNLikelihood.normalize(bnl_likelihood)))
+
+    """
+        This metric fits a BayesianNetwork to the real data 
+        and then evaluates the average log likelihood of the rows from the synthetic data on it.
+    """
+    bnl_log_likelihood = BNLogLikelihood.compute(real_data, synthetic_data)
+    print('\nBNLogLikelihood: {}'.format((bnl_log_likelihood)))
+
+    """
+        This metric fits multiple GaussianMixture models to the real data 
+        and then evaluates the average log likelihood of the synthetic data on them.
+    """
+    gm_log_likelihood = GMLogLikelihood.compute(real_data, synthetic_data, n_components=(1, 10), iterations=2)
+    print('GMLogLikelihood: {}'.format(GMLogLikelihood.normalize(gm_log_likelihood)))
+
+    ############# Detection Metrics #############
+    print('\n~~~~~~~~~ Detection Metrics ~~~~~~~~~\n')
+    """
+        The output of the metrics will be the 1 minus 
+        the average ROC AUC score across all the cross validation splits. 
+        1 -> The classifier cannot distinguish real from synthetic data at all.
+        0 -> The classifier is able to distinguish real from synthetic data with 100% accuracy.
+    """
+    log_detection_score = LogisticDetection.compute(real_data, synthetic_data)
+    print('Logistic Detection score: {}'.format(log_detection_score))
+    #svc_detection_score = SVCDetection.compute(real_data, synthetic_data)
+    #print('Logistic Detection score: {}'.format(svc_detection_score))
+
+
+    #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
     print(synthetic_data)
 
 
-#train_gan(epochs=300, bots=False)
-synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000, bots=False)
+# train_gan(epochs=300, bots=False)
+synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000, bots=True)
 evaluate_synthetic_data(synthetic_data, real_data)
-
