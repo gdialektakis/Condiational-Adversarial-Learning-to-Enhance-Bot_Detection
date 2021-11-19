@@ -3,6 +3,7 @@ Import necessary libraries to create a generative adversarial network
 The code is developed using the PyTorch library
 """
 import os
+import umap
 import pickle
 import time
 import torch
@@ -32,6 +33,7 @@ Network Architectures
 The following are the discriminator and generator architectures
 """
 
+reducer = umap.UMAP()
 
 class Discriminator(nn.Module):
     def __init__(self):
@@ -71,7 +73,7 @@ def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_siz
 
     # Keep 20% of the data for later testing
     train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
-
+    pickle.dump(train_set, open('simple_gan/train_set', 'wb'))
     pickle.dump(test_set, open('simple_gan/test_data', 'wb'))
 
     # Convert features that are boolean to integers
@@ -114,16 +116,17 @@ def train_gan(epochs=100, bots=True):
     """
     Hyperparameter settings
     """
-    lr = 2e-4
-    bs = 64
+    G_lr = 0.0002
+    D_lr = 0.0002
+    bs = 256
     loss = nn.BCELoss()
 
     # Model
     G = Generator().to(device)
     D = Discriminator().to(device)
 
-    G_optimizer = optim.Adam(G.parameters(), lr=lr, betas=(0.5, 0.999))
-    D_optimizer = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
+    G_optimizer = optim.Adam(G.parameters(), lr=G_lr, betas=(0.5, 0.999))
+    D_optimizer = optim.Adam(D.parameters(), lr=D_lr, betas=(0.5, 0.999))
 
     # Load our data
     train_loader, _, _ = prepare_data(batch_size=bs)
@@ -333,6 +336,6 @@ def evaluate_synthetic_data(synthetic_data, real_data):
     print(synthetic_data)
 
 
-# train_gan(epochs=300, bots=False)
-synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000, bots=True)
+#train_gan(epochs=300, bots=True)
+synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000, bots=False)
 evaluate_synthetic_data(synthetic_data, real_data)

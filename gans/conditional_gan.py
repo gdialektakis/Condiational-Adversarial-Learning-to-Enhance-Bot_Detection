@@ -264,7 +264,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     # Load initial data
     _, _, _, real_data = prepare_data(bots=bots)
 
-    generator = torch.load('conditional_gan/Conditional_Generator_save_800.pth')
+    generator = torch.load('conditional_gan/Conditional_Generator_save.pth')
     # Generate points in the latent space
     noise = (torch.rand(num_of_samples, 128) - 0.5) / 0.5
     noise = noise.to(device)

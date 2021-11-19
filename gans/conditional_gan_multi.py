@@ -41,7 +41,7 @@ class Discriminator(nn.Module):
 
         self.model = nn.Sequential(
             nn.Linear(self.num_features + self.num_classes, 400),
-            nn.LeakyReLU(0.1, inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(0.3),
             nn.Linear(400, 1),
             nn.Sigmoid()
@@ -82,7 +82,7 @@ class Generator(nn.Module):
 
 
 def prepare_data(df=pickle.load(open('multi_class_data', 'rb')), batch_size=64):
-    df = df.sample(n=1000)
+    #df = df.sample(n=1000)
 
     # Keep 20% of the data for later testing
     train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
@@ -90,6 +90,7 @@ def prepare_data(df=pickle.load(open('multi_class_data', 'rb')), batch_size=64):
 
     # Convert features that are boolean to integers
     df = train_set.applymap(lambda x: int(x) if isinstance(x, bool) else x)
+    print(df['label'].value_counts())
     y = df['label']
 
     # Drop unwanted columns
@@ -97,7 +98,6 @@ def prepare_data(df=pickle.load(open('multi_class_data', 'rb')), batch_size=64):
     if 'max_appearance_of_punc_mark' in df.columns:
         df = df.drop(['max_appearance_of_punc_mark'], axis=1)
 
-    df.to_csv('df_columns')
     # Scale our data in the range of (0, 1)
     scaler = MinMaxScaler()
     df_scaled = scaler.fit_transform(X=df)
@@ -121,8 +121,9 @@ def train_gan(epochs=100):
     """
     Hyperparameter settings
     """
-    lr = 2e-4
-    bs = 64
+    G_lr = 0.0002
+    D_lr = 0.0002
+    bs = 256
     loss = nn.BCELoss()
     num_of_classes = 6
 
@@ -130,8 +131,8 @@ def train_gan(epochs=100):
     G = Generator().to(device)
     D = Discriminator().to(device)
 
-    G_optimizer = optim.Adam(G.parameters(), lr=lr, betas=(0.5, 0.999))
-    D_optimizer = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
+    G_optimizer = optim.Adam(G.parameters(), lr=G_lr, betas=(0.5, 0.999))
+    D_optimizer = optim.Adam(D.parameters(), lr=D_lr, betas=(0.5, 0.999))
 
     # Load our data
     train_loader, _, _ = prepare_data(batch_size=bs)
@@ -247,7 +248,7 @@ A function that loads a trained Generator model and uses it to create synthetic 
 """
 
 
-def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_classes=6):
+def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_classes=6, label=0):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load initial data
@@ -259,7 +260,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     noise = noise.to(device)
 
     # Create class labels
-    class_labels = torch.randint(0, num_of_classes, (num_of_samples,)).to(device)
+    class_labels = torch.randint(label, label+1, (num_of_samples,)).to(device)
 
     # Pass latent points and class labels through our Generator to produce synthetic samples
     synthetic_samples = generator(noise, class_labels)
@@ -281,13 +282,35 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     synthetic_data = transform_bool.transform(synthetic_data)
     pickle.dump(synthetic_data, open('conditional_gan_multi/synthetic_data_' + str(num_of_samples), 'wb'))
 
-    return synthetic_samples, real_data
+    return synthetic_data, real_data
 
 
 #train_gan(epochs=300)
 
+""" 
+Label Distribution:
+0    24403
+3    13283
+1     9333
+5     4703
+4      958
+2      408
+"""
+## For each class, generate that many samples to reach 30000 samples
+synthetic_data0, _ = generate_synthetic_samples(num_of_samples=30000-24403, label=0)
+synthetic_data1, _ = generate_synthetic_samples(num_of_samples=30000-9333, label=1)
+synthetic_data2, _ = generate_synthetic_samples(num_of_samples=30000-408, label=2)
+synthetic_data3, _ = generate_synthetic_samples(num_of_samples=30000-13283, label=3)
+synthetic_data4, _ = generate_synthetic_samples(num_of_samples=30000-958, label=4)
+synthetic_data5, _ = generate_synthetic_samples(num_of_samples=30000-4703, label=5)
 
-synthetic_data, real_data = generate_synthetic_samples(num_of_samples=3000)
+# List of above dataframes
+pdList = [synthetic_data0, synthetic_data1, synthetic_data2, synthetic_data3, synthetic_data4, synthetic_data5]
+final_df = pd.concat(pdList)
+
+pickle.dump(final_df, open('conditional_gan_multi/synthetic_multiclass_data_30000_each_class', 'wb'))
+
+"""
 
 print('Data have been generated')
 ks = KSTest.compute(synthetic_data, real_data)
@@ -295,3 +318,4 @@ print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
 kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
 print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 print(synthetic_data)
+"""
