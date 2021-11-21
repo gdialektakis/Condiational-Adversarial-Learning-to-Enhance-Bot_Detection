@@ -68,7 +68,8 @@ def divide_df(df):
     return human, social_bot, political_bot, spam_bot, self_declared_bot, cyborg
 
 
-def plot_cdf(human, social_bot, political_bot, spam_bot, self_declared_bot, cyborg):
+def plot_CDF(df):
+    human, social_bot, political_bot, spam_bot, self_declared_bot, cyborg = divide_df(df)
     # User features
     human_user_features = human[['user_features']]
     social_bot_user_features = social_bot[['user_features']]
@@ -247,7 +248,68 @@ def plot_cdf(human, social_bot, political_bot, spam_bot, self_declared_bot, cybo
     return
 
 
-def plot_pdf(df):
+def plot_PDF(df):
+    human, social_bot, political_bot, spam_bot, self_declared_bot, cyborg = divide_df(df)
+
+    ############################# User features #############################
+    plt.figure()
+    ax1 = human.user_features.plot.density(color='blue', xlim=(-20, 20), linewidth=0.8, linestyle='dashdot')
+    social_bot.user_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    political_bot.user_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    spam_bot.user_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    self_declared_bot.user_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    cyborg.user_features.plot.density(color='magenta', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    plt.title('Probability Density plot for User features')
+    ax1.legend(['human', 'social_bot', 'political_bot', 'spam_bot', 'self_declared_bot', 'cyborg'])
+    plt.show()
+
+    ############################# Content features #############################
+    plt.figure()
+    ax1 = human.content_features.plot.density(color='blue', xlim=(-30, 30), linewidth=0.8, linestyle='dashdot')
+    social_bot.content_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    political_bot.content_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    spam_bot.content_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    self_declared_bot.content_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    cyborg.content_features.plot.density(color='magenta', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    plt.title('Probability Density plot for Content features')
+    ax1.legend(['human', 'social_bot', 'political_bot', 'spam_bot', 'self_declared_bot', 'cyborg'])
+    plt.show()
+
+    ############################# Temporal features #############################
+    plt.figure()
+    ax1 = human.temporal_features.plot.density(color='blue', xlim=(-40, 40), linewidth=0.8, linestyle='dashdot')
+    social_bot.temporal_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    political_bot.temporal_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    spam_bot.temporal_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    self_declared_bot.temporal_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    cyborg.temporal_features.plot.density(color='magenta', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    plt.title('Probability Density plot for Temporal features')
+    ax1.legend(['human', 'social_bot', 'political_bot', 'spam_bot', 'self_declared_bot', 'cyborg'])
+    plt.show()
+
+    ############################# Sentiment features #############################
+    plt.figure()
+    ax1 = human.sentiment_features.plot.density(color='blue', xlim=(-20, 20), linewidth=0.8, linestyle='dashdot')
+    social_bot.sentiment_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    political_bot.sentiment_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    spam_bot.sentiment_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    self_declared_bot.sentiment_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    cyborg.sentiment_features.plot.density(color='magenta', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    plt.title('Probability Density plot for Sentiment features')
+    ax1.legend(['human', 'social_bot', 'political_bot', 'spam_bot', 'self_declared_bot', 'cyborg'])
+    plt.show()
+
+    ############################# Hashtag Network features #############################
+    plt.figure()
+    ax1 = human.hashtag_network_features.plot.density(color='blue', xlim=(-10, 10), linewidth=0.8, linestyle='dashdot')
+    social_bot.hashtag_network_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    political_bot.hashtag_network_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    spam_bot.hashtag_network_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    self_declared_bot.hashtag_network_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    cyborg.hashtag_network_features.plot.density(color='magenta', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    plt.title('Probability Density plot for Hashtag Network features')
+    ax1.legend(['human', 'social_bot', 'political_bot', 'spam_bot', 'self_declared_bot', 'cyborg'])
+    plt.show()
     return
 
 
@@ -257,5 +319,6 @@ def plot_ccdf(df):
 
 features_df = dimensionality_reduction()
 
-human, social_bot, political_bot, spam_bot, self_declared_bot, cyborg = divide_df(features_df)
-plot_cdf(human, social_bot, political_bot, spam_bot, self_declared_bot, cyborg)
+#plot_CDF(features_df)
+
+plot_PDF(features_df)
