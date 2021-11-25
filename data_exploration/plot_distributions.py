@@ -10,7 +10,7 @@ pd.options.mode.chained_assignment = None
 
 
 def dimensionality_reduction():
-    data = pickle.load(open('multi_class_data', 'rb'))
+    data = pickle.load(open('../data/multi_class_data', 'rb'))
     data = data.reset_index(drop=True)
     # summarize class distribution
     print('Bot types distribution:' + '\n', data['label'].value_counts())

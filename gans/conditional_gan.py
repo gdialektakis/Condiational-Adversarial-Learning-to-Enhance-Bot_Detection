@@ -81,7 +81,7 @@ class Generator(nn.Module):
         return out.view(-1, 1, 1, self.num_features)
 
 
-def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_size=64, bots=True):
+def prepare_data(data=pickle.load(open('../data/final_data_no_rts_v2', 'rb')), batch_size=64, bots=True):
     df = pd.DataFrame(data)
 
     #df = df.sample(n=1000)

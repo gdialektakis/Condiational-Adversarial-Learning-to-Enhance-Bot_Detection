@@ -64,8 +64,13 @@ class Generator(nn.Module):
         return nn.Sigmoid()(x)
 
 
-def prepare_data(data=pickle.load(open('final_data_no_rts_v2', 'rb')), batch_size=64, bots=True):
-    df = pd.DataFrame(data)
+def prepare_data(batch_size=64, bots=True):
+    if bots:
+        df = pickle.load(open('../data/train_binary_data_bots', 'rb'))
+    else:
+        df = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+
+    #df = pd.DataFrame(data)
     # Convert labels from string to 0 and 1
     df['label'] = df['label'].map({'human': 0, 'bot': 1, 'cyborg': 1})
     # df = df.sample(n=100)

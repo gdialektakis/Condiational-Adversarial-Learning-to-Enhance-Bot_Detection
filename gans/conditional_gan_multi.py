@@ -81,16 +81,11 @@ class Generator(nn.Module):
         return out.view(-1, 1, 1, self.num_features)
 
 
-def prepare_data(df=pickle.load(open('multi_class_data', 'rb')), batch_size=64):
+def prepare_data(df=pickle.load(open('../data/train_multiclass_data', 'rb')), batch_size=256):
     #df = df.sample(n=1000)
 
-    # Keep 20% of the data for later testing
-    train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
-    pickle.dump(test_set, open('conditional_gan_multi/test_multiclass_data', 'wb'))
-    pickle.dump(test_set, open('conditional_gan_multi/train_multiclass_data', 'wb'))
-
     # Convert features that are boolean to integers
-    df = train_set.applymap(lambda x: int(x) if isinstance(x, bool) else x)
+    df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
     print(df['label'].value_counts())
     y = df['label']
 

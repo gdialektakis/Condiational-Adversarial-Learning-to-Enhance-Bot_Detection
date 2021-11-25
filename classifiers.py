@@ -67,7 +67,7 @@ def run_classifiers(X_train, X_test, y_train, y_test):
 
 
 def train_with_original_data():
-    df = pickle.load(open('gans/multi_class_data', 'rb'))
+    df = pickle.load(open('data/multi_class_data', 'rb'))
 
     # Convert features that are boolean to integers
     df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
@@ -166,7 +166,7 @@ def train_with_augmented_data():
 
 # TODO
 def train_with_original_and_test_on_synthetic_data():
-    df = pickle.load(open('gans/multi_class_data', 'rb'))
+    df = pickle.load(open('data/multi_class_data', 'rb'))
     synthetic_data = pickle.load(open('gans/conditional_gan_multi/synthetic_multiclass_data_30000_each_class', 'rb'))
     synthetic_data = synthetic_data.sample(frac=1)
     # Convert features that are boolean to integers
