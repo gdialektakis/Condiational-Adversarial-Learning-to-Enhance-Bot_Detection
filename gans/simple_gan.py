@@ -33,7 +33,6 @@ Network Architectures
 The following are the discriminator and generator architectures
 """
 
-reducer = umap.UMAP()
 
 class Discriminator(nn.Module):
     def __init__(self):
@@ -140,11 +139,12 @@ def train_gan(epochs=100, bots=True):
     mean_D_loss = []
     mean_G_loss = []
     D_acc = []
+
     for epoch in range(epochs):
         acc = []
         epoch_D_loss = []
         epoch_G_loss = []
-
+    
         for idx, (train_batch, _) in enumerate(train_loader):
             idx += 1
 

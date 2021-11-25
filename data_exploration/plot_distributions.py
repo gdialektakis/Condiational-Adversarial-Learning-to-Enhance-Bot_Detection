@@ -73,10 +73,10 @@ def plot_CDF(df):
     # User features
     human_user_features = human[['user_features']]
     social_bot_user_features = social_bot[['user_features']]
-    political_bot_user_features = human[['user_features']]
-    spam_bot_user_features = human[['user_features']]
-    self_declared_bot_user_features = human[['user_features']]
-    cyborg_bot_user_features = human[['user_features']]
+    political_bot_user_features = political_bot[['user_features']]
+    spam_bot_user_features = spam_bot[['user_features']]
+    self_declared_bot_user_features = self_declared_bot[['user_features']]
+    cyborg_bot_user_features = cyborg[['user_features']]
 
     # Content features
     human_content_features = human[['content_features']]
@@ -115,136 +115,144 @@ def plot_CDF(df):
     plt.figure()
     human_user_features['cdf'] = human_user_features.rank(method='average', pct=True)
     ax1 = human_user_features.sort_values('user_features').plot(x='user_features', y='cdf', grid=True,
-                                                                title='User features CDF', label='human', xlim=(-5,20))
+                                                                title='User features CDF', label='human', xlim=(-5, 20),
+                                                                linestyle='dashdot')
 
     social_bot_user_features['cdf'] = social_bot_user_features.rank(method='average', pct=True)
     social_bot_user_features.sort_values('user_features').plot(x='user_features', y='cdf', grid=True,
-                                                               ax=ax1, label='social_bot')
+                                                               ax=ax1, label='social_bot', linestyle='dashdot')
 
     political_bot_user_features['cdf'] = political_bot_user_features.rank(method='average', pct=True)
     political_bot_user_features.sort_values('user_features').plot(x='user_features', y='cdf', grid=True,
-                                                                  ax=ax1, label='political_bot')
+                                                                  ax=ax1, label='political_bot', linestyle='dashdot')
     spam_bot_user_features['cdf'] = spam_bot_user_features.rank(method='average', pct=True)
     spam_bot_user_features.sort_values('user_features').plot(x='user_features', y='cdf', grid=True, ax=ax1,
-                                                             label='spam_bot')
+                                                             label='spam_bot', linestyle='dashdot')
     self_declared_bot_user_features['cdf'] = self_declared_bot_user_features.rank(method='average', pct=True)
     self_declared_bot_user_features.sort_values('user_features').plot(x='user_features', y='cdf', grid=True, ax=ax1,
-                                                                      label='self_declared')
+                                                                      label='self_declared', linestyle='dashdot')
 
     cyborg_bot_user_features['cdf'] = cyborg_bot_user_features.rank(method='average', pct=True)
     cyborg_bot_user_features.sort_values('user_features').plot(x='user_features', y='cdf', grid=True, ax=ax1,
-                                                               label='cyborg')
+                                                               label='cyborg', linestyle='dashdot')
+    # plt.show()
+    plt.savefig("cdf_plots/user_features_CDF.jpg")
 
     ############################# Content features #############################
     # Plot the CDF for user features for all types of bots
     plt.figure()
     human_content_features['cdf'] = human_content_features.rank(method='average', pct=True)
     ax1 = human_content_features.sort_values('content_features').plot(x='content_features', y='cdf', grid=True,
-                                                                title='Content features CDF', label='human')
+                                                                title='Content features CDF', label='human', linestyle='dashdot')
 
     social_bot_content_features['cdf'] = social_bot_content_features.rank(method='average', pct=True)
     social_bot_content_features.sort_values('content_features').plot(x='content_features', y='cdf', grid=True,
-                                                               ax=ax1, label='social_bot')
+                                                               ax=ax1, label='social_bot', linestyle='dashdot')
 
     political_bot_content_features['cdf'] = political_bot_content_features.rank(method='average', pct=True)
     political_bot_content_features.sort_values('content_features').plot(x='content_features', y='cdf', grid=True,
-                                                                  ax=ax1, label='political_bot')
+                                                                  ax=ax1, label='political_bot', linestyle='dashdot')
     spam_bot_content_features['cdf'] = spam_bot_content_features.rank(method='average', pct=True)
     spam_bot_content_features.sort_values('content_features').plot(x='content_features', y='cdf', grid=True, ax=ax1,
-                                                             label='spam_bot')
+                                                             label='spam_bot', linestyle='dashdot')
     self_declared_bot_content_features['cdf'] = self_declared_bot_content_features.rank(method='average', pct=True)
     self_declared_bot_content_features.sort_values('content_features').plot(x='content_features', y='cdf', grid=True, ax=ax1,
-                                                                      label='self_declared')
+                                                                      label='self_declared', linestyle='dashdot')
 
     cyborg_bot_content_features['cdf'] = cyborg_bot_content_features.rank(method='average', pct=True)
     cyborg_bot_content_features.sort_values('content_features').plot(x='content_features', y='cdf', grid=True, ax=ax1,
-                                                               label='cyborg')
-    plt.show()
+                                                               label='cyborg', linestyle='dashdot')
+    #plt.show()
+    plt.savefig("cdf_plots/content_features_CDF.jpg")
 
     ############################# Temporal features #############################
     # Plot the CDF for user features for all types of bots
     plt.figure()
     human_temporal_features['cdf'] = human_temporal_features.rank(method='average', pct=True)
     ax1 = human_temporal_features.sort_values('temporal_features').plot(x='temporal_features', y='cdf', grid=True,
-                                                                      title='Temporal features CDF', label='human', xlim=(-10, 50))
+                                                                      title='Temporal features CDF', label='human', xlim=(-10, 50), linestyle='dashdot')
 
     social_bot_temporal_features['cdf'] = social_bot_temporal_features.rank(method='average', pct=True)
     social_bot_temporal_features.sort_values('temporal_features').plot(x='temporal_features', y='cdf', grid=True,
-                                                                     ax=ax1, label='social_bot')
+                                                                     ax=ax1, label='social_bot', linestyle='dashdot')
 
     political_bot_temporal_features['cdf'] = political_bot_temporal_features.rank(method='average', pct=True)
     political_bot_temporal_features.sort_values('temporal_features').plot(x='temporal_features', y='cdf', grid=True,
-                                                                        ax=ax1, label='political_bot')
+                                                                        ax=ax1, label='political_bot', linestyle='dashdot')
     spam_bot_temporal_features['cdf'] = spam_bot_temporal_features.rank(method='average', pct=True)
     spam_bot_temporal_features.sort_values('temporal_features').plot(x='temporal_features', y='cdf', grid=True, ax=ax1,
-                                                                   label='spam_bot')
+                                                                   label='spam_bot', linestyle='dashdot')
     self_declared_bot_temporal_features['cdf'] = self_declared_bot_temporal_features.rank(method='average', pct=True)
     self_declared_bot_temporal_features.sort_values('temporal_features').plot(x='temporal_features', y='cdf', grid=True,
                                                                             ax=ax1,
-                                                                            label='self_declared')
+                                                                            label='self_declared', linestyle='dashdot')
 
     cyborg_bot_temporal_features['cdf'] = cyborg_bot_temporal_features.rank(method='average', pct=True)
     cyborg_bot_temporal_features.sort_values('temporal_features').plot(x='temporal_features', y='cdf', grid=True, ax=ax1,
-                                                                     label='cyborg')
-    plt.show()
+                                                                     label='cyborg', linestyle='dashdot')
+    #plt.show()
+    plt.savefig("cdf_plots/temporal_features_CDF.jpg")
 
     ############################# Sentiment features #############################
     # Plot the CDF for user features for all types of bots
     plt.figure()
     human_sentiment_features['cdf'] = human_sentiment_features.rank(method='average', pct=True)
     ax1 = human_sentiment_features.sort_values('sentiment_features').plot(x='sentiment_features', y='cdf', grid=True,
-                                                                        title='Sentiment features CDF', label='human', xlim=(-10, 60))
+                                                                        title='Sentiment features CDF', label='human', xlim=(-10, 60), linestyle='dashdot')
 
     social_bot_sentiment_features['cdf'] = social_bot_sentiment_features.rank(method='average', pct=True)
     social_bot_sentiment_features.sort_values('sentiment_features').plot(x='sentiment_features', y='cdf', grid=True,
-                                                                       ax=ax1, label='social_bot')
+                                                                       ax=ax1, label='social_bot', linestyle='dashdot')
 
     political_bot_sentiment_features['cdf'] = political_bot_sentiment_features.rank(method='average', pct=True)
     political_bot_sentiment_features.sort_values('sentiment_features').plot(x='sentiment_features', y='cdf', grid=True,
-                                                                          ax=ax1, label='political_bot')
+                                                                          ax=ax1, label='political_bot', linestyle='dashdot')
     spam_bot_sentiment_features['cdf'] = spam_bot_sentiment_features.rank(method='average', pct=True)
     spam_bot_sentiment_features.sort_values('sentiment_features').plot(x='sentiment_features', y='cdf', grid=True, ax=ax1,
-                                                                     label='spam_bot')
+                                                                     label='spam_bot', linestyle='dashdot')
     self_declared_bot_sentiment_features['cdf'] = self_declared_bot_sentiment_features.rank(method='average', pct=True)
     self_declared_bot_sentiment_features.sort_values('sentiment_features').plot(x='sentiment_features', y='cdf', grid=True,
                                                                               ax=ax1,
-                                                                              label='self_declared')
+                                                                              label='self_declared', linestyle='dashdot')
 
     cyborg_bot_sentiment_features['cdf'] = cyborg_bot_sentiment_features.rank(method='average', pct=True)
     cyborg_bot_sentiment_features.sort_values('sentiment_features').plot(x='sentiment_features', y='cdf', grid=True,
                                                                        ax=ax1,
-                                                                       label='cyborg')
-    plt.show()
+                                                                       label='cyborg', linestyle='dashdot')
+
+    #plt.show()
+    plt.savefig("cdf_plots/sentiment_features_CDF.jpg")
 
     ############################# Hashtag Network features #############################
     # Plot the CDF for user features for all types of bots
     plt.figure()
     human_hashtag_network_features['cdf'] = human_hashtag_network_features.rank(method='average', pct=True)
     ax1 = human_hashtag_network_features.sort_values('hashtag_network_features').plot(x='hashtag_network_features', y='cdf', grid=True,
-                                                                          title='Hashtag Network features CDF', label='human', xlim=(-5, 10))
+                                                                          title='Hashtag Network features CDF', label='human', xlim=(-5, 10), linestyle='dashdot')
 
     social_bot_hashtag_network_features['cdf'] = social_bot_hashtag_network_features.rank(method='average', pct=True)
     social_bot_hashtag_network_features.sort_values('hashtag_network_features').plot(x='hashtag_network_features', y='cdf', grid=True,
-                                                                         ax=ax1, label='social_bot')
+                                                                         ax=ax1, label='social_bot', linestyle='dashdot')
 
     political_bot_hashtag_network_features['cdf'] = political_bot_hashtag_network_features.rank(method='average', pct=True)
     political_bot_hashtag_network_features.sort_values('hashtag_network_features').plot(x='hashtag_network_features', y='cdf', grid=True,
-                                                                            ax=ax1, label='political_bot')
+                                                                            ax=ax1, label='political_bot', linestyle='dashdot')
     spam_bot_hashtag_network_features['cdf'] = spam_bot_hashtag_network_features.rank(method='average', pct=True)
     spam_bot_hashtag_network_features.sort_values('hashtag_network_features').plot(x='hashtag_network_features', y='cdf', grid=True,
                                                                        ax=ax1,
-                                                                       label='spam_bot')
+                                                                       label='spam_bot', linestyle='dashdot')
     self_declared_bot_hashtag_network_features['cdf'] = self_declared_bot_hashtag_network_features.rank(method='average', pct=True)
     self_declared_bot_hashtag_network_features.sort_values('hashtag_network_features').plot(x='hashtag_network_features', y='cdf',
                                                                                 grid=True,
                                                                                 ax=ax1,
-                                                                                label='self_declared')
+                                                                                label='self_declared', linestyle='dashdot')
 
     cyborg_bot_hashtag_network_features['cdf'] = cyborg_bot_hashtag_network_features.rank(method='average', pct=True)
     cyborg_bot_hashtag_network_features.sort_values('hashtag_network_features').plot(x='hashtag_network_features', y='cdf', grid=True,
                                                                          ax=ax1,
-                                                                         label='cyborg')
-    plt.show()
+                                                                         label='cyborg', linestyle='dashdot')
+    #plt.show()
+    plt.savefig("cdf_plots/hashtag_network_features_CDF.jpg")
     return
 
 
@@ -254,62 +262,67 @@ def plot_PDF(df):
     ############################# User features #############################
     plt.figure()
     ax1 = human.user_features.plot.density(color='blue', xlim=(-20, 20), linewidth=0.8, linestyle='dashdot')
-    social_bot.user_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    political_bot.user_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    spam_bot.user_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    self_declared_bot.user_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    cyborg.user_features.plot.density(color='magenta', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    social_bot.user_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    political_bot.user_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    spam_bot.user_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    self_declared_bot.user_features.plot.density(color='purple', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    cyborg.user_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
     plt.title('Probability Density plot for User features')
     ax1.legend(['human', 'social_bot', 'political_bot', 'spam_bot', 'self_declared_bot', 'cyborg'])
-    plt.show()
+    #plt.show()
+    plt.savefig("pdf_plots/user_features_PDF.jpg")
 
     ############################# Content features #############################
     plt.figure()
     ax1 = human.content_features.plot.density(color='blue', xlim=(-30, 30), linewidth=0.8, linestyle='dashdot')
-    social_bot.content_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    political_bot.content_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    spam_bot.content_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    self_declared_bot.content_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    cyborg.content_features.plot.density(color='magenta', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    social_bot.content_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    political_bot.content_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    spam_bot.content_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    self_declared_bot.content_features.plot.density(color='purple', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    cyborg.content_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
     plt.title('Probability Density plot for Content features')
     ax1.legend(['human', 'social_bot', 'political_bot', 'spam_bot', 'self_declared_bot', 'cyborg'])
-    plt.show()
+    #plt.show()
+    plt.savefig("pdf_plots/content_features_PDF.jpg")
 
     ############################# Temporal features #############################
     plt.figure()
     ax1 = human.temporal_features.plot.density(color='blue', xlim=(-40, 40), linewidth=0.8, linestyle='dashdot')
-    social_bot.temporal_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    political_bot.temporal_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    spam_bot.temporal_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    self_declared_bot.temporal_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    cyborg.temporal_features.plot.density(color='magenta', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    social_bot.temporal_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    political_bot.temporal_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    spam_bot.temporal_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    self_declared_bot.temporal_features.plot.density(color='purple', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    cyborg.temporal_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
     plt.title('Probability Density plot for Temporal features')
     ax1.legend(['human', 'social_bot', 'political_bot', 'spam_bot', 'self_declared_bot', 'cyborg'])
-    plt.show()
+    #plt.show()
+    plt.savefig("pdf_plots/temporal_features_PDF.jpg")
 
     ############################# Sentiment features #############################
     plt.figure()
     ax1 = human.sentiment_features.plot.density(color='blue', xlim=(-20, 20), linewidth=0.8, linestyle='dashdot')
-    social_bot.sentiment_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    political_bot.sentiment_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    spam_bot.sentiment_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    self_declared_bot.sentiment_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    cyborg.sentiment_features.plot.density(color='magenta', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    social_bot.sentiment_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    political_bot.sentiment_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    spam_bot.sentiment_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    self_declared_bot.sentiment_features.plot.density(color='purple', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    cyborg.sentiment_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
     plt.title('Probability Density plot for Sentiment features')
     ax1.legend(['human', 'social_bot', 'political_bot', 'spam_bot', 'self_declared_bot', 'cyborg'])
-    plt.show()
+    #plt.show()
+    plt.savefig("pdf_plots/sentiment_features_PDF.jpg")
 
     ############################# Hashtag Network features #############################
     plt.figure()
     ax1 = human.hashtag_network_features.plot.density(color='blue', xlim=(-10, 10), linewidth=0.8, linestyle='dashdot')
-    social_bot.hashtag_network_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    political_bot.hashtag_network_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    spam_bot.hashtag_network_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    self_declared_bot.hashtag_network_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
-    cyborg.hashtag_network_features.plot.density(color='magenta', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    social_bot.hashtag_network_features.plot.density(color='orange', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    political_bot.hashtag_network_features.plot.density(color='green', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    spam_bot.hashtag_network_features.plot.density(color='red', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    self_declared_bot.hashtag_network_features.plot.density(color='purple', ax=ax1, linewidth=0.8, linestyle='dashdot')
+    cyborg.hashtag_network_features.plot.density(color='brown', ax=ax1, linewidth=0.8, linestyle='dashdot')
     plt.title('Probability Density plot for Hashtag Network features')
     ax1.legend(['human', 'social_bot', 'political_bot', 'spam_bot', 'self_declared_bot', 'cyborg'])
-    plt.show()
+    #plt.show()
+    plt.savefig("pdf_plots/hashtag_network_features_PDF.jpg")
     return
 
 
@@ -319,6 +332,6 @@ def plot_ccdf(df):
 
 features_df = dimensionality_reduction()
 
-#plot_CDF(features_df)
+plot_CDF(features_df)
 
 plot_PDF(features_df)
