@@ -39,7 +39,7 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.fc1 = nn.Linear(310, 400)
         self.fc2 = nn.Linear(400, 1)
-        self.activation = nn.LeakyReLU(0.1)
+        self.activation = nn.LeakyReLU(0.2)
 
     def forward(self, x):
         x = x.view(-1, 310)
@@ -70,32 +70,12 @@ def prepare_data(batch_size=64, bots=True):
     else:
         df = pickle.load(open('../data/train_binary_data_humans', 'rb'))
 
-    #df = pd.DataFrame(data)
-    # Convert labels from string to 0 and 1
-    df['label'] = df['label'].map({'human': 0, 'bot': 1, 'cyborg': 1})
     # df = df.sample(n=100)
-
-    # Keep 20% of the data for later testing
-    train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
-    pickle.dump(train_set, open('simple_gan/train_set', 'wb'))
-    pickle.dump(test_set, open('simple_gan/test_data', 'wb'))
-
-    # Convert features that are boolean to integers
-    df = train_set.applymap(lambda x: int(x) if isinstance(x, bool) else x)
-
-    if bots:
-        # keep only bot accounts to train our GAN
-        df = df[df['label'] == 1]
-    else:
-        # keep only human accounts to train our GAN
-        df = df[df['label'] == 0]
 
     y = df['label']
 
-    # Drop unwanted columns
-    df = df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
-    if 'max_appearance_of_punc_mark' in df.columns:
-        df = df.drop(['max_appearance_of_punc_mark'], axis=1)
+    # Drop label column
+    df = df.drop(['label'], axis=1)
 
     # Scale our data in the range of (0, 1)
     scaler = MinMaxScaler()
@@ -122,7 +102,7 @@ def train_gan(epochs=100, bots=True):
     """
     G_lr = 0.0002
     D_lr = 0.0002
-    bs = 256
+    bs = 512
     loss = nn.BCELoss()
 
     # Model
@@ -251,13 +231,19 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=Tru
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load initial data
-    _, real_data, real_data_scaled = prepare_data(bots=bots)
+    real_data = pickle.load(open('../data/train_binary_data_humans', 'rb'))
 
     # Load the appropriate Generator
     if bots:
         generator = torch.load('simple_gan/Bot_Generator_save.pth')
+        # Load initial data
+        real_data = pickle.load(open('../data/train_binary_data_bots', 'rb'))
     else:
         generator = torch.load('simple_gan/Human_Generator_save.pth')
+        # Load initial data
+        real_data = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+
+    real_data = real_data.drop(['label'], axis=1)
 
     # Generate points in the latent space
     noise = (torch.rand(num_of_samples, 128) - 0.5) / 0.5
@@ -279,14 +265,20 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=Tru
     synthetic_data = transform_bool.transform(synthetic_data)
 
     if bots:
-        pickle.dump(synthetic_data, open('simple_gan/synthetic_bot_data_' + str(num_of_samples), 'wb'))
+        pickle.dump(synthetic_data, open('../data/synthetic_data/simple_gan/synthetic_bot_data_' + str(num_of_samples), 'wb'))
     else:
-        pickle.dump(synthetic_data, open('simple_gan/synthetic_human_data_' + str(num_of_samples), 'wb'))
+        pickle.dump(synthetic_data, open('../data/synthetic_data/simple_gan/synthetic_human_data_' + str(num_of_samples), 'wb'))
 
-    return synthetic_data, real_data
+    return synthetic_data
 
 
-def evaluate_synthetic_data(synthetic_data, real_data):
+def evaluate_synthetic_data(synthetic_data, bots=True):
+    if bots:
+        real_data = pickle.load(open('../data/train_binary_data_bots', 'rb'))
+    else:
+        real_data = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+
+    real_data = real_data.drop(['label'], axis=1)
 
     ############# Statistical Metrics #############
     print('\n~~~~~~~~~ Statistical Metrics ~~~~~~~~~\n')
@@ -341,6 +333,12 @@ def evaluate_synthetic_data(synthetic_data, real_data):
     print(synthetic_data)
 
 
-#train_gan(epochs=300, bots=True)
-synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000, bots=False)
-evaluate_synthetic_data(synthetic_data, real_data)
+#train_gan(epochs=300, bots=False)
+
+synthetic_data_humans = generate_synthetic_samples(num_of_samples=30000, bots=False)
+synthetic_data_bots = generate_synthetic_samples(num_of_samples=30000, bots=True)
+print('~~~~~~~~~ Evaluating synthetic human data ~~~~~~~~~~')
+evaluate_synthetic_data(synthetic_data_humans, bots=False)
+print('~~~~~~~~~ Evaluating synthetic bot data ~~~~~~~~~~')
+evaluate_synthetic_data(synthetic_data_bots, bots=True)
+

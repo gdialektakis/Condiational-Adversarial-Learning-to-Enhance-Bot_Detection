@@ -84,7 +84,7 @@ class Generator(nn.Module):
 def prepare_data(df=pickle.load(open('../data/train_multiclass_data', 'rb')), batch_size=256):
     # df = df.sample(n=1000)
 
-    print(df['label'].value_counts())
+    #print(df['label'].value_counts())
     y = df['label']
 
     # Drop label column
@@ -115,7 +115,7 @@ def train_gan(epochs=100):
     """
     G_lr = 0.0002
     D_lr = 0.0002
-    bs = 256
+    bs = 512
     loss = nn.BCELoss()
     num_of_classes = 6
 
@@ -240,7 +240,7 @@ A function that loads a trained Generator model and uses it to create synthetic 
 """
 
 
-def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_classes=6, label=0):
+def generate_synthetic_samples(num_of_samples=100, num_of_features=310, label=0):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load initial data
@@ -334,6 +334,7 @@ def generate_samples_to_reach_30000_per_class():
 
 def evaluate_synthetic_data(synthetic_data):
     real_data = pickle.load(open('../data/train_multiclass_data', 'rb'))
+
     print('\n~~~~~~~~~~~~~~ Synthetic Data Evaluation ~~~~~~~~~~~~~~')
 
     print('\n----------- Comparing synthetic to train real data ----------- ')
@@ -350,7 +351,7 @@ def evaluate_synthetic_data(synthetic_data):
     print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
 
-# train_gan(epochs=300)
+#train_gan(epochs=300)
 
 print('~~~~~~~~~~~~~~ Evaluating method of creating 30000 new samples for each class ~~~~~~~~~~~~~~')
 evaluate_synthetic_data(synthetic_data=generate_30000_samples_per_class())

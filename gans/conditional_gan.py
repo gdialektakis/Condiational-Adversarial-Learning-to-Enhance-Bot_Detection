@@ -81,26 +81,19 @@ class Generator(nn.Module):
         return out.view(-1, 1, 1, self.num_features)
 
 
-def prepare_data(data=pickle.load(open('../data/final_data_no_rts_v2', 'rb')), batch_size=64, bots=True):
-    df = pd.DataFrame(data)
+def prepare_data(batch_size=512, bots=True):
+    bots_df = pickle.load(open('../data/train_binary_data_bots', 'rb'))
+    humans_df = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+
+    # List of above dataframes
+    pdList = [bots_df, humans_df]
+    df = pd.concat(pdList)
+
+    # Shuffle the dataframe
+    df = df.sample(frac=1)
 
     #df = df.sample(n=1000)
-
-    # Convert labels from string to 0 and 1
-    df['label'] = df['label'].map({'human': 0, 'bot': 1, 'cyborg': 1})
-
-    # Keep 20% of the data for later testing
-    train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
-    pickle.dump(test_set, open('conditional_gan/test_data', 'wb'))
-
-    # Convert features that are boolean to integers
-    df = train_set.applymap(lambda x: int(x) if isinstance(x, bool) else x)
     y = df['label']
-
-    # Drop unwanted columns
-    df = df.drop(['user_name', 'user_screen_name', 'user_id'], axis=1)
-    if 'max_appearance_of_punc_mark' in df.columns:
-        df = df.drop(['max_appearance_of_punc_mark'], axis=1)
 
     if bots:
         df_filtered = df[df['label'] == 1]
