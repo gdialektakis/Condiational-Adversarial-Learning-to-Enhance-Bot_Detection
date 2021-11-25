@@ -82,17 +82,13 @@ class Generator(nn.Module):
 
 
 def prepare_data(df=pickle.load(open('../data/train_multiclass_data', 'rb')), batch_size=256):
-    #df = df.sample(n=1000)
+    # df = df.sample(n=1000)
 
-    # Convert features that are boolean to integers
-    df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
     print(df['label'].value_counts())
     y = df['label']
 
-    # Drop unwanted columns
-    df = df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
-    if 'max_appearance_of_punc_mark' in df.columns:
-        df = df.drop(['max_appearance_of_punc_mark'], axis=1)
+    # Drop label column
+    df = df.drop(['label'], axis=1)
 
     # Scale our data in the range of (0, 1)
     scaler = MinMaxScaler()
@@ -256,7 +252,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     noise = noise.to(device)
 
     # Create class labels
-    class_labels = torch.randint(label, label+1, (num_of_samples,)).to(device)
+    class_labels = torch.randint(label, label + 1, (num_of_samples,)).to(device)
 
     # Pass latent points and class labels through our Generator to produce synthetic samples
     synthetic_samples = generator(noise, class_labels)
@@ -267,7 +263,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     class_labels = class_labels.cpu().detach().numpy()
     class_labels = class_labels.reshape(num_of_samples, 1)
 
-    # Load saved min_max_scaler for inverse transformation of the generated data
+    # Load saved min_max_scaler for inverse scaling transformation of the generated data
     scaler = joblib.load("conditional_gan/scaler.save")
     synthetic_data = scaler.inverse_transform(synthetic_samples)
     synthetic_data = pd.DataFrame(data=synthetic_data, columns=real_data.columns)
@@ -275,43 +271,88 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     synthetic_samples = synthetic_data.copy(deep=True)
     # Insert column containing labels
     synthetic_data.insert(loc=310, column='label', value=class_labels, allow_duplicates=True)
+    # Round values to closest integer for columns that should be boolean
     synthetic_data = transform_bool.transform(synthetic_data)
-    pickle.dump(synthetic_data, open('conditional_gan_multi/synthetic_data_' + str(num_of_samples), 'wb'))
+    # Map booleans to 1 and 0.
+    synthetic_data = synthetic_data.applymap(lambda x: int(x) if isinstance(x, bool) else x)
+    # pickle.dump(synthetic_data, open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data' + str(num_of_samples), 'wb'))
 
     return synthetic_data, real_data
 
 
-#train_gan(epochs=300)
+def generate_30000_samples_per_class():
+    ## For each class, generate 30000 synthetic samples
+    synthetic_data0, _ = generate_synthetic_samples(num_of_samples=30000, label=0)
+    synthetic_data1, _ = generate_synthetic_samples(num_of_samples=30000, label=1)
+    synthetic_data2, _ = generate_synthetic_samples(num_of_samples=30000, label=2)
+    synthetic_data3, _ = generate_synthetic_samples(num_of_samples=30000, label=3)
+    synthetic_data4, _ = generate_synthetic_samples(num_of_samples=30000, label=4)
+    synthetic_data5, _ = generate_synthetic_samples(num_of_samples=30000, label=5)
 
-""" 
-Label Distribution:
-0    24403
-3    13283
-1     9333
-5     4703
-4      958
-2      408
-"""
-## For each class, generate that many samples to reach 30000 samples
-synthetic_data0, _ = generate_synthetic_samples(num_of_samples=30000-24403, label=0)
-synthetic_data1, _ = generate_synthetic_samples(num_of_samples=30000-9333, label=1)
-synthetic_data2, _ = generate_synthetic_samples(num_of_samples=30000-408, label=2)
-synthetic_data3, _ = generate_synthetic_samples(num_of_samples=30000-13283, label=3)
-synthetic_data4, _ = generate_synthetic_samples(num_of_samples=30000-958, label=4)
-synthetic_data5, _ = generate_synthetic_samples(num_of_samples=30000-4703, label=5)
+    # List of above dataframes
+    pdList = [synthetic_data0, synthetic_data1, synthetic_data2, synthetic_data3, synthetic_data4, synthetic_data5]
+    final_df = pd.concat(pdList)
 
-# List of above dataframes
-pdList = [synthetic_data0, synthetic_data1, synthetic_data2, synthetic_data3, synthetic_data4, synthetic_data5]
-final_df = pd.concat(pdList)
+    # Shuffle the dataframe
+    final_df = final_df.sample(frac=1)
 
-pickle.dump(final_df, open('conditional_gan_multi/synthetic_multiclass_data_30000_each_class', 'wb'))
+    pickle.dump(final_df,
+                open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30000_per_class', 'wb'))
+    return final_df
 
-"""
 
-print('Data have been generated')
-ks = KSTest.compute(synthetic_data, real_data)
-print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
-kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
-print(synthetic_data)
-"""
+def generate_samples_to_reach_30000_per_class():
+    ## For each class, generate that many synthetic samples to reach 30000 so that we have a balanced dataset.
+    """
+    Label Distribution:
+    0    24403
+    3    13283
+    1     9333
+    5     4703
+    4      958
+    2      408
+    """
+    ## For each class, generate that many samples to reach 30000 samples
+    synthetic_data0, _ = generate_synthetic_samples(num_of_samples=30000 - 24403, label=0)
+    synthetic_data1, _ = generate_synthetic_samples(num_of_samples=30000 - 9333, label=1)
+    synthetic_data2, _ = generate_synthetic_samples(num_of_samples=30000 - 408, label=2)
+    synthetic_data3, _ = generate_synthetic_samples(num_of_samples=30000 - 13283, label=3)
+    synthetic_data4, _ = generate_synthetic_samples(num_of_samples=30000 - 958, label=4)
+    synthetic_data5, _ = generate_synthetic_samples(num_of_samples=30000 - 4703, label=5)
+
+    # List of above dataframes
+    pdList = [synthetic_data0, synthetic_data1, synthetic_data2, synthetic_data3, synthetic_data4, synthetic_data5]
+    final_df = pd.concat(pdList)
+
+    # Shuffle the dataframe
+    final_df = final_df.sample(frac=1)
+
+    pickle.dump(final_df,
+                open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_balanced_per_class', 'wb'))
+    return final_df
+
+
+def evaluate_synthetic_data(synthetic_data):
+    real_data = pickle.load(open('../data/train_multiclass_data', 'rb'))
+    print('\n~~~~~~~~~~~~~~ Synthetic Data Evaluation ~~~~~~~~~~~~~~')
+
+    print('\n----------- Comparing synthetic to train real data ----------- ')
+    ks = KSTest.compute(synthetic_data, real_data)
+    print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
+    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+
+    real_data = pickle.load(open('../data/test_multiclass_data', 'rb'))
+    print('\n----------- Comparing synthetic to test real data ----------- ')
+    ks = KSTest.compute(synthetic_data, real_data)
+    print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
+    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+
+
+# train_gan(epochs=300)
+
+print('~~~~~~~~~~~~~~ Evaluating method of creating 30000 new samples for each class ~~~~~~~~~~~~~~')
+evaluate_synthetic_data(synthetic_data=generate_30000_samples_per_class())
+print('~~~~~~~~~~~~~~ Evaluating method of creating a balanced dataset ~~~~~~~~~~~~~~')
+evaluate_synthetic_data(synthetic_data=generate_samples_to_reach_30000_per_class())
