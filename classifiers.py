@@ -17,7 +17,7 @@ import warnings
 
 
 def run_classifiers(X_train, X_test, y_train, y_test):
-    for classifier_name in ["voting", "bagging", "adaboost"]: #"bayes", "logreg", "rand_forest", "svm",
+    for classifier_name in ["bayes", "logreg", "rand_forest", "svm", "voting", "bagging", "adaboost"]:
         if classifier_name == "logreg":
             classifier = LogisticRegression(max_iter=1000, n_jobs=-1)
         elif classifier_name == "bayes":
@@ -67,21 +67,15 @@ def run_classifiers(X_train, X_test, y_train, y_test):
 
 
 def train_with_original_data():
-    df = pickle.load(open('data/multi_class_data', 'rb'))
+    train_data = pickle.load(open('data/train_multiclass_data', 'rb'))
+    test_data = pickle.load(open('data/test_multiclass_data', 'rb'))
 
-    # Convert features that are boolean to integers
-    df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
-
-    y = df['label']
-    print(df['label'].value_counts())
+    y_train = train_data['label']
+    y_test = test_data['label']
 
     # Drop unwanted columns
-    df = df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
-    if 'max_appearance_of_punc_mark' in df.columns:
-        df = df.drop(['max_appearance_of_punc_mark'], axis=1)
-
-    # split the labeled tweets into train and test set
-    X_train, X_test, y_train, y_test = model_selection.train_test_split(df, y, test_size=0.2)
+    X_train = train_data.drop(['label'], axis=1)
+    X_test = test_data.drop(['label'], axis=1)
 
     # Scale our data in the range of (0, 1)
     scaler = MinMaxScaler()
@@ -106,39 +100,32 @@ def train_with_original_data():
     run_classifiers(X_smote, X_test, y_smote, y_test)
 
 
-# TODO
 def train_with_augmented_data():
-    df = pickle.load(open('gans/conditional_gan_multi/train_multiclass_data', 'rb'))
-    synthetic_data = pickle.load(open('gans/conditional_gan_multi/synthetic_multiclass_data_30000_each_class', 'rb'))
+    print('\n---------------- Training with balanced synthetic samples for each class -------------------\n')
+    df = pickle.load(open('data/train_multiclass_data', 'rb'))
+    # synthetic_data = pickle.load(open('data/synthetic_data/conditional_gan_multiclass/synthetic_data_30000_per_class', 'rb'))
+    synthetic_data = pickle.load(
+        open('data/synthetic_data/conditional_gan_multiclass/synthetic_data_balanced_per_class', 'rb'))
     synthetic_data = synthetic_data.sample(frac=1)
     augmented_df = df.append(synthetic_data)
     augmented_df = augmented_df.sample(frac=1)
-    # Convert features that are boolean to integers
-    augmented_df = augmented_df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
 
     y = augmented_df['label']
     print(augmented_df['label'].value_counts())
 
     # Drop unwanted columns
-    augmented_df = augmented_df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
-    if 'max_appearance_of_punc_mark' in augmented_df.columns:
-        augmented_df = augmented_df.drop(['max_appearance_of_punc_mark'], axis=1)
+    augmented_df = augmented_df.drop(['label'], axis=1)
 
     X_train = augmented_df
     y_train = y
 
-    test_df = pickle.load(open('gans/conditional_gan_multi/test_multiclass_data', 'rb'))
-
-    # Convert features that are boolean to integers
-    test_df = test_df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
+    test_df = pickle.load(open('data/test_multiclass_data', 'rb'))
 
     y_test = test_df['label']
     print(test_df['label'].value_counts())
 
     # Drop unwanted columns
-    test_df = test_df.drop(['user_name', 'user_screen_name', 'user_id', 'label'], axis=1)
-    if 'max_appearance_of_punc_mark' in test_df.columns:
-        test_df = test_df.drop(['max_appearance_of_punc_mark'], axis=1)
+    test_df = test_df.drop(['label'], axis=1)
 
     X_test = test_df
     # Scale our data in the range of (0, 1)
@@ -149,19 +136,11 @@ def train_with_augmented_data():
     y_train = y_train.astype('int')
     y_test = y_test.astype('int')
 
-    # SMOTE
-    smote_sampler = SMOTE(sampling_strategy='not majority', n_jobs=-1)
-    X_smote, y_smote = smote_sampler.fit_resample(X_train, y_train)
-
     # summarize class distribution
     print("\nLabel distribution before SMOTE: {}".format(Counter(y_train)))
-    print("Label distribution after SMOTE: {}\n".format(Counter(y_smote)))
 
     print('\n~~~~~~~~ Running Classifiers ~~~~~~~~~~~~~~~')
     run_classifiers(X_train, X_test, y_train, y_test)
-
-    #print('\n~~~~~~~~ Running Classifiers with SMOTE ~~~~~~~~~~~~~~~')
-    #run_classifiers(X_smote, X_test, y_smote, y_test)
 
 
 # TODO
@@ -216,6 +195,6 @@ def train_with_original_and_test_on_synthetic_data():
     run_classifiers(X_smote, X_test, y_smote, y_test)
 
 
-#train_with_original_data()
-#train_with_original_and_test_on_synthetic_data()
-train_with_augmented_data()
+train_with_original_data()
+# train_with_original_and_test_on_synthetic_data()
+#train_with_augmented_data()
