@@ -42,8 +42,11 @@ class Discriminator(nn.Module):
         self.model = nn.Sequential(
             nn.Linear(self.num_features + self.num_classes, 400),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Dropout(0.3),
-            nn.Linear(400, 1),
+            nn.Dropout(0.2),
+            nn.Linear(400, 1000),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(0.2),
+            nn.Linear(1000, 1),
             nn.Sigmoid()
         )
 
@@ -340,20 +343,20 @@ def evaluate_synthetic_data(synthetic_data):
     print('\n----------- Comparing synthetic to train real data ----------- ')
     ks = KSTest.compute(synthetic_data, real_data)
     print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
-    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+    #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
     real_data = pickle.load(open('../data/test_multiclass_data', 'rb'))
     print('\n----------- Comparing synthetic to test real data ----------- ')
     ks = KSTest.compute(synthetic_data, real_data)
     print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
-    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+    #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
 
 #train_gan(epochs=300)
 
-print('~~~~~~~~~~~~~~ Evaluating method of creating 30000 new samples for each class ~~~~~~~~~~~~~~')
+print('\n~~~~~~~~~~~~~~ Evaluating method of creating 30000 new samples for each class ~~~~~~~~~~~~~~')
 evaluate_synthetic_data(synthetic_data=generate_30000_samples_per_class())
-print('~~~~~~~~~~~~~~ Evaluating method of creating a balanced dataset ~~~~~~~~~~~~~~')
+print('\n~~~~~~~~~~~~~~ Evaluating method of creating a balanced dataset ~~~~~~~~~~~~~~')
 evaluate_synthetic_data(synthetic_data=generate_samples_to_reach_30000_per_class())

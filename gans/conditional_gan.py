@@ -41,9 +41,12 @@ class Discriminator(nn.Module):
 
         self.model = nn.Sequential(
             nn.Linear(self.num_features+self.num_classes, 400),
-            nn.LeakyReLU(0.1, inplace=True),
-            nn.Dropout(0.3),
-            nn.Linear(400, 1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(0.2),
+            nn.Linear(400, 1000),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(0.2),
+            nn.Linear(1000, 1),
             nn.Sigmoid()
         )
 
@@ -85,7 +88,7 @@ def prepare_data(batch_size=512, bots=True):
     bots_df = pickle.load(open('../data/train_binary_data_bots', 'rb'))
     humans_df = pickle.load(open('../data/train_binary_data_humans', 'rb'))
 
-    # List of above dataframes
+    # Concatenate human and bot training samples
     pdList = [bots_df, humans_df]
     df = pd.concat(pdList)
 
@@ -114,7 +117,7 @@ def prepare_data(batch_size=512, bots=True):
     # Transform dataframe into pytorch Tensor
     train = TensorDataset(torch.Tensor(df_scaled), torch.Tensor(np.array(y)))
     train_loader = DataLoader(dataset=train, batch_size=batch_size, shuffle=True)
-    return train_loader, df, pd.DataFrame(df_scaled), df_filtered
+    return train_loader, df, df_filtered
 
 
 def train_gan(epochs=100):
@@ -126,7 +129,7 @@ def train_gan(epochs=100):
     """
     Hyperparameter settings
     """
-    lr = 2e-4
+    lr = 0.0002
     bs = 64
     loss = nn.BCELoss()
 
@@ -138,7 +141,7 @@ def train_gan(epochs=100):
     D_optimizer = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
 
     # Load our data
-    train_loader, _, _, _ = prepare_data(batch_size=bs)
+    train_loader, _, _ = prepare_data(batch_size=bs)
 
     """
     Network training procedure
@@ -255,7 +258,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load initial data
-    _, _, _, real_data = prepare_data(bots=bots)
+    _, _, real_data = prepare_data(bots=bots)
 
     generator = torch.load('conditional_gan/Conditional_Generator_save.pth')
     # Generate points in the latent space
@@ -293,24 +296,46 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     else:
         pickle.dump(synthetic_data, open('conditional_gan/synthetic_human_data_' + str(num_of_samples), 'wb'))
 
-    return synthetic_samples, real_data
+    return synthetic_samples
 
 
-#train_gan(epochs=300)
+def create_final_synthetic_dataset():
+    synthetic_data_bots = generate_synthetic_samples(num_of_samples=30000, bots=True)
+    synthetic_data_humans = generate_synthetic_samples(num_of_samples=30000, bots=False)
+
+    # Concatenate human and bot synthetic samples
+    pdList = [synthetic_data_bots, synthetic_data_humans]
+    final_df = pd.concat(pdList)
+
+    # Shuffle the dataframe
+    final_df = final_df.sample(frac=1)
+    pickle.dump(final_df, open('../data/synthetic_data/conditional_gan/synthetic_binary_data', 'wb'))
+    return final_df
 
 
-synthetic_data, real_data = generate_synthetic_samples(num_of_samples=30000, bots=True)
+def evaluate_synthetic_data(synthetic_data):
+    real_data_bots = pickle.load(open('../data/train_binary_data_bots', 'rb'))
+    real_data_humans = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+
+    # Concatenate human and bot synthetic samples
+    pdList = [real_data_bots, real_data_humans]
+    real_data = pd.concat(pdList)
+
+    # Shuffle the dataframe
+    real_data = real_data.sample(frac=1)
+    real_data = real_data.drop(['label'], axis=1)
+    """
+    This metric uses the two-sample Kolmogorov–Smirnov test to compare the distributions of 
+    continuous columns using the empirical CDF. The output for each column is 1 minus the KS Test D statistic, 
+    which indicates the maximum distance between the expected CDF and the observed CDF values.
+    """
+    ks = KSTest.compute(synthetic_data, real_data)
+    print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
+    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+    print(synthetic_data)
 
 
-print('Data have been generated')
+train_gan(epochs=300)
 
-"""
-This metric uses the two-sample Kolmogorov–Smirnov test to compare the distributions of 
-continuous columns using the empirical CDF. The output for each column is 1 minus the KS Test D statistic, 
-which indicates the maximum distance between the expected CDF and the observed CDF values.
-"""
-ks = KSTest.compute(synthetic_data, real_data)
-print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
-kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
-print(synthetic_data)
+evaluate_synthetic_data(synthetic_data=create_final_synthetic_dataset())

@@ -38,13 +38,16 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
         self.fc1 = nn.Linear(310, 400)
-        self.fc2 = nn.Linear(400, 1)
+        self.fc2 = nn.Linear(400, 1000)
+        self.fc3 = nn.Linear(1000, 1)
         self.activation = nn.LeakyReLU(0.2)
+        self.dropout = nn.Dropout(0.2)
 
     def forward(self, x):
         x = x.view(-1, 310)
-        x = self.activation(self.fc1(x))
-        x = self.fc2(x)
+        x = self.dropout(self.activation(self.fc1(x)))
+        x = self.dropout(self.activation(self.fc2(x)))
+        x = self.fc3(x)
         return nn.Sigmoid()(x)
 
 
@@ -102,7 +105,7 @@ def train_gan(epochs=100, bots=True):
     """
     G_lr = 0.0002
     D_lr = 0.0002
-    bs = 512
+    bs = 64
     loss = nn.BCELoss()
 
     # Model
@@ -129,7 +132,7 @@ def train_gan(epochs=100, bots=True):
         acc = []
         epoch_D_loss = []
         epoch_G_loss = []
-    
+
         for idx, (train_batch, _) in enumerate(train_loader):
             idx += 1
 
@@ -265,19 +268,40 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=Tru
     synthetic_data = transform_bool.transform(synthetic_data)
 
     if bots:
-        pickle.dump(synthetic_data, open('../data/synthetic_data/simple_gan/synthetic_bot_data_' + str(num_of_samples), 'wb'))
+        pickle.dump(synthetic_data,
+                    open('../data/synthetic_data/simple_gan/synthetic_bot_data_' + str(num_of_samples), 'wb'))
     else:
-        pickle.dump(synthetic_data, open('../data/synthetic_data/simple_gan/synthetic_human_data_' + str(num_of_samples), 'wb'))
+        pickle.dump(synthetic_data,
+                    open('../data/synthetic_data/simple_gan/synthetic_human_data_' + str(num_of_samples), 'wb'))
 
     return synthetic_data
 
 
-def evaluate_synthetic_data(synthetic_data, bots=True):
-    if bots:
-        real_data = pickle.load(open('../data/train_binary_data_bots', 'rb'))
-    else:
-        real_data = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+def create_final_synthetic_dataset():
+    synthetic_data_bots = generate_synthetic_samples(num_of_samples=30000, bots=True)
+    synthetic_data_humans = generate_synthetic_samples(num_of_samples=30000, bots=False)
 
+    # Concatenate human and bot synthetic samples
+    pdList = [synthetic_data_bots, synthetic_data_humans]
+    final_df = pd.concat(pdList)
+
+    # Shuffle the dataframe
+    final_df = final_df.sample(frac=1)
+    pickle.dump(final_df, open('../data/synthetic_data/simple_gan/synthetic_binary_data', 'wb'))
+    return final_df
+
+
+def evaluate_synthetic_data(synthetic_data):
+    print('~~~~~~~~~ Evaluating synthetic human data ~~~~~~~~~~')
+    real_data_bots = pickle.load(open('../data/train_binary_data_bots', 'rb'))
+    real_data_humans = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+
+    # Concatenate human and bot synthetic samples
+    pdList = [real_data_bots, real_data_humans]
+    real_data = pd.concat(pdList)
+
+    # Shuffle the dataframe
+    real_data = real_data.sample(frac=1)
     real_data = real_data.drop(['label'], axis=1)
 
     ############# Statistical Metrics #############
@@ -324,21 +348,15 @@ def evaluate_synthetic_data(synthetic_data, bots=True):
     """
     log_detection_score = LogisticDetection.compute(real_data, synthetic_data)
     print('Logistic Detection score: {}'.format(log_detection_score))
-    #svc_detection_score = SVCDetection.compute(real_data, synthetic_data)
-    #print('Logistic Detection score: {}'.format(svc_detection_score))
+    # svc_detection_score = SVCDetection.compute(real_data, synthetic_data)
+    # print('Logistic Detection score: {}'.format(svc_detection_score))
 
-
-    #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-    #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+    # kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    # print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
     print(synthetic_data)
 
 
-#train_gan(epochs=300, bots=False)
+train_gan(epochs=300, bots=False)
+train_gan(epochs=300, bots=True)
 
-synthetic_data_humans = generate_synthetic_samples(num_of_samples=30000, bots=False)
-synthetic_data_bots = generate_synthetic_samples(num_of_samples=30000, bots=True)
-print('~~~~~~~~~ Evaluating synthetic human data ~~~~~~~~~~')
-evaluate_synthetic_data(synthetic_data_humans, bots=False)
-print('~~~~~~~~~ Evaluating synthetic bot data ~~~~~~~~~~')
-evaluate_synthetic_data(synthetic_data_bots, bots=True)
-
+evaluate_synthetic_data(synthetic_data=create_final_synthetic_dataset())
