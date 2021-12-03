@@ -279,4 +279,4 @@ def group_features_no_rts(df):
     return user_features, temporal_features, content_features, sentiment_features, hashtag_network_features
 
 
-group_features_no_rts(df=pickle.load(open('../data/multi_class_data', 'rb')))
+# group_features_no_rts(df=pickle.load(open('../data/multi_class_data', 'rb')))
