@@ -45,10 +45,28 @@ def prepare_binary_data(data=pickle.load(open('../data/final_data_no_rts_v2', 'r
 
     # Keep 20% of the data for later testing
     train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
-    pickle.dump(test_set, open('../data/test_binary_data_'+filename, 'wb'))
-    pickle.dump(train_set, open('../data/train_binary_data_'+filename, 'wb'))
+    pickle.dump(test_set, open('../data/test_binary_data' + filename, 'wb'))
+    pickle.dump(train_set, open('../data/train_binary_data' + filename, 'wb'))
 
 
-prepare_binary_data(bots=True)
-prepare_binary_data(bots=False)
-prepare_multiclass_data()
+def merge_dataframes():
+    # This function merges bots and humans into a single dataframe.
+    bots_train = pickle.load(open('../data/train_binary_data_bots', 'rb'))
+    humans_train = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+
+    train_data = bots_train.append(humans_train)
+    train_data = train_data.sample(frac=1)
+    pickle.dump(train_data, open('../data/train_binary_data', 'wb'))
+
+    bots_test = pickle.load(open('../data/test_binary_data_bots', 'rb'))
+    humans_test = pickle.load(open('../data/test_binary_data_humans', 'rb'))
+
+    test_data = bots_test.append(humans_test)
+    test_data = test_data.sample(frac=1)
+    pickle.dump(test_data, open('../data/test_binary_data', 'wb'))
+
+
+#prepare_binary_data(bots=True)
+#prepare_binary_data(bots=False)
+#prepare_multiclass_data()
+merge_dataframes()
