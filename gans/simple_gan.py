@@ -279,7 +279,12 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=Tru
 
 def create_final_synthetic_dataset():
     synthetic_data_bots = generate_synthetic_samples(num_of_samples=30000, bots=True)
+    # Assign bot label (1) and create a new column on the dataframe
+    synthetic_data_bots['label'] = pd.Series(np.ones(len(synthetic_data_bots.index), dtype=np.int64), index=synthetic_data_bots.index)
+
     synthetic_data_humans = generate_synthetic_samples(num_of_samples=30000, bots=False)
+    # Assign human label (0) and create a new column on the dataframe
+    synthetic_data_humans['label'] = pd.Series(np.zeros(len(synthetic_data_humans.index), dtype=np.int64), index=synthetic_data_humans.index)
 
     # Concatenate human and bot synthetic samples
     pdList = [synthetic_data_bots, synthetic_data_humans]
@@ -356,7 +361,7 @@ def evaluate_synthetic_data(synthetic_data):
     print(synthetic_data)
 
 
-train_gan(epochs=300, bots=False)
-train_gan(epochs=300, bots=True)
+#train_gan(epochs=300, bots=False)
+#train_gan(epochs=300, bots=True)
 
 evaluate_synthetic_data(synthetic_data=create_final_synthetic_dataset())

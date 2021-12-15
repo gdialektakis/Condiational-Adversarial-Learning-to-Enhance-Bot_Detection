@@ -296,7 +296,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
     else:
         pickle.dump(synthetic_data, open('conditional_gan/synthetic_human_data_' + str(num_of_samples), 'wb'))
 
-    return synthetic_samples
+    return synthetic_data
 
 
 def create_final_synthetic_dataset():
@@ -336,6 +336,6 @@ def evaluate_synthetic_data(synthetic_data):
     print(synthetic_data)
 
 
-train_gan(epochs=300)
+#train_gan(epochs=300)
 
 evaluate_synthetic_data(synthetic_data=create_final_synthetic_dataset())
