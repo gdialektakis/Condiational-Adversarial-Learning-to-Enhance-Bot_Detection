@@ -267,24 +267,30 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=Tru
 
     synthetic_data = transform_bool.transform(synthetic_data)
 
-    if bots:
-        pickle.dump(synthetic_data,
-                    open('../data/synthetic_data/simple_gan/synthetic_bot_data_' + str(num_of_samples), 'wb'))
-    else:
-        pickle.dump(synthetic_data,
-                    open('../data/synthetic_data/simple_gan/synthetic_human_data_' + str(num_of_samples), 'wb'))
-
     return synthetic_data
 
 
-def create_final_synthetic_dataset():
-    synthetic_data_bots = generate_synthetic_samples(num_of_samples=30000, bots=True)
-    # Assign bot label (1) and create a new column on the dataframe
-    synthetic_data_bots['label'] = pd.Series(np.ones(len(synthetic_data_bots.index), dtype=np.int64), index=synthetic_data_bots.index)
+def create_final_synthetic_dataset(test=False):
+    if test:
+        synthetic_data_bots = generate_synthetic_samples(num_of_samples=int(13688 / 2), bots=True)
+        # Assign bot label (1) and create a new column on the dataframe
+        synthetic_data_bots['label'] = pd.Series(np.ones(len(synthetic_data_bots.index), dtype=np.int64),
+                                                 index=synthetic_data_bots.index)
 
-    synthetic_data_humans = generate_synthetic_samples(num_of_samples=30000, bots=False)
-    # Assign human label (0) and create a new column on the dataframe
-    synthetic_data_humans['label'] = pd.Series(np.zeros(len(synthetic_data_humans.index), dtype=np.int64), index=synthetic_data_humans.index)
+        synthetic_data_humans = generate_synthetic_samples(num_of_samples=int(13688 / 2), bots=False)
+        # Assign human label (0) and create a new column on the dataframe
+        synthetic_data_humans['label'] = pd.Series(np.zeros(len(synthetic_data_humans.index), dtype=np.int64),
+                                                   index=synthetic_data_humans.index)
+    else:
+        synthetic_data_bots = generate_synthetic_samples(num_of_samples=30000, bots=True)
+        # Assign bot label (1) and create a new column on the dataframe
+        synthetic_data_bots['label'] = pd.Series(np.ones(len(synthetic_data_bots.index), dtype=np.int64),
+                                                 index=synthetic_data_bots.index)
+
+        synthetic_data_humans = generate_synthetic_samples(num_of_samples=30000, bots=False)
+        # Assign human label (0) and create a new column on the dataframe
+        synthetic_data_humans['label'] = pd.Series(np.zeros(len(synthetic_data_humans.index), dtype=np.int64),
+                                                   index=synthetic_data_humans.index)
 
     # Concatenate human and bot synthetic samples
     pdList = [synthetic_data_bots, synthetic_data_humans]
@@ -292,7 +298,10 @@ def create_final_synthetic_dataset():
 
     # Shuffle the dataframe
     final_df = final_df.sample(frac=1)
-    pickle.dump(final_df, open('../data/synthetic_data/simple_gan/synthetic_binary_data', 'wb'))
+    if test:
+        pickle.dump(final_df, open('../data/synthetic_data/simple_gan/synthetic_binary_test_data', 'wb'))
+    else:
+        pickle.dump(final_df, open('../data/synthetic_data/simple_gan/synthetic_binary_train_data', 'wb'))
     return final_df
 
 
@@ -361,7 +370,7 @@ def evaluate_synthetic_data(synthetic_data):
     print(synthetic_data)
 
 
-#train_gan(epochs=300, bots=False)
-#train_gan(epochs=300, bots=True)
+# train_gan(epochs=300, bots=False)
+# train_gan(epochs=300, bots=True)
 
-evaluate_synthetic_data(synthetic_data=create_final_synthetic_dataset())
+evaluate_synthetic_data(synthetic_data=create_final_synthetic_dataset(test=True))

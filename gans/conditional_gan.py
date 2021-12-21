@@ -291,17 +291,16 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, num_of_c
 
     synthetic_data = transform_bool.transform(synthetic_data)
 
-    if bots:
-        pickle.dump(synthetic_data, open('conditional_gan/synthetic_bot_data_' + str(num_of_samples), 'wb'))
-    else:
-        pickle.dump(synthetic_data, open('conditional_gan/synthetic_human_data_' + str(num_of_samples), 'wb'))
-
     return synthetic_data
 
 
-def create_final_synthetic_dataset():
-    synthetic_data_bots = generate_synthetic_samples(num_of_samples=30000, bots=True)
-    synthetic_data_humans = generate_synthetic_samples(num_of_samples=30000, bots=False)
+def create_final_synthetic_dataset(test=False):
+    if test:
+        synthetic_data_bots = generate_synthetic_samples(num_of_samples=int(13688/2), bots=True)
+        synthetic_data_humans = generate_synthetic_samples(num_of_samples=int(13688/2), bots=False)
+    else:
+        synthetic_data_bots = generate_synthetic_samples(num_of_samples=30000, bots=True)
+        synthetic_data_humans = generate_synthetic_samples(num_of_samples=30000, bots=False)
 
     # Concatenate human and bot synthetic samples
     pdList = [synthetic_data_bots, synthetic_data_humans]
@@ -309,7 +308,10 @@ def create_final_synthetic_dataset():
 
     # Shuffle the dataframe
     final_df = final_df.sample(frac=1)
-    pickle.dump(final_df, open('../data/synthetic_data/conditional_gan/synthetic_binary_data', 'wb'))
+    if test:
+        pickle.dump(final_df, open('../data/synthetic_data/conditional_gan/synthetic_binary_test_data', 'wb'))
+    else:
+        pickle.dump(final_df, open('../data/synthetic_data/conditional_gan/synthetic_binary_train_data', 'wb'))
     return final_df
 
 
@@ -338,4 +340,4 @@ def evaluate_synthetic_data(synthetic_data):
 
 #train_gan(epochs=300)
 
-evaluate_synthetic_data(synthetic_data=create_final_synthetic_dataset())
+evaluate_synthetic_data(synthetic_data=create_final_synthetic_dataset(test=True))

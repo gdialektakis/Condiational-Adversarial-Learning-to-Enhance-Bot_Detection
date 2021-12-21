@@ -170,13 +170,22 @@ def train_on_original_and_test_on_augmented_data():
     run_classifiers(X_train, X_test, y_train, y_test)
 
 
-def train_on_augmented_and_test_on_original_data():
+def train_on_augmented_and_test_on_original_data(ac_gan=False):
+
     print('\n ~~~~~~~~~~~~~~~ Train with Augmented Data and Test on Original ~~~~~~~~~~~~~~~~')
     print('\n---------------- Training with 30000 new synthetic samples for each class  -------------------')
+
     df = pickle.load(open('../data/train_multiclass_data', 'rb'))
-    synthetic_data = pickle.load(
-        open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30000_per_class', 'rb'))
-    # synthetic_data = pickle.load(open('data/synthetic_data/conditional_gan_multiclass/synthetic_data_balanced_per_class', 'rb'))
+    if ac_gan:
+        synthetic_data = pickle.load(
+            open('../data/synthetic_data/ac_gan/synthetic_data_30000_per_class', 'rb'))
+    else:
+        synthetic_data = pickle.load(
+            open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30000_per_class', 'rb'))
+
+        #synthetic_data = pickle.load(open('data/synthetic_data/conditional_gan_multiclass'
+        #                                  '/synthetic_data_balanced_per_class', 'rb'))
+
     synthetic_data = synthetic_data.sample(frac=1)
     augmented_df = df.append(synthetic_data)
     augmented_df = augmented_df.sample(frac=1)
@@ -301,10 +310,10 @@ def train_and_test_on_augmented_data():
 
 # Train on Augmented Data
 # train_and_test_on_augmented_data()
-# train_on_augmented_and_test_on_original_data()
+train_on_augmented_and_test_on_original_data(ac_gan=True)
 # train_on_augmented_and_test_on_synthetic_data()
 
 # Train on Original Data
-train_and_test_on_original_data()
+# train_and_test_on_original_data()
 # train_on_original_and_test_on_augmented_data()
 # train_on_original_and_test_on_synthetic_data()

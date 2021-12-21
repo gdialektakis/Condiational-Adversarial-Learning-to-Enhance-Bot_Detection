@@ -2,17 +2,15 @@
 Import necessary libraries to create a generative adversarial network
 The code is developed using the PyTorch library
 """
-import os
+
 import pickle
 import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler
 import joblib
 import matplotlib.pyplot as plt
@@ -21,11 +19,15 @@ from sdv.metrics.tabular import KSTest
 from statistics import mean
 import helper_scripts.transform_booleans as transform_bool
 import warnings
-import seaborn as sns
+from sklearn import metrics
+from imblearn.metrics import geometric_mean_score
 
 warnings.filterwarnings('ignore')
 
 """
+This model uses an Auxiliary Classifier (AC) to enable GAN perform both multiclass bot detection
+and bot synthetic data generation.
+
 Network Architectures
 The following are the discriminator and generator architectures
 """
@@ -148,10 +150,12 @@ def train_gan(epochs=100):
     mean_D_loss = []
     mean_G_loss = []
     mean_D_acc = []
+    mean_acc = []
     for epoch in range(epochs):
         epoch_D_loss = []
         epoch_G_loss = []
         epoch_D_acc = []
+        epoch_acc = []
         # labels = train_loader[1]
         for idx, train_data in enumerate(train_loader):
             idx += 1
@@ -176,7 +180,8 @@ def train_gan(epochs=100):
             fake_targets = torch.ones([fake_inputs.shape[0], 1]).to(device)
 
             # Generator Loss
-            G_loss = 0.5 * (adversarial_loss(fake_outputs, fake_targets) + auxiliary_loss(pred_label, fake_class_labels))
+            G_loss = 0.5 * (
+                        adversarial_loss(fake_outputs, fake_targets) + auxiliary_loss(pred_label, fake_class_labels))
 
             G_optimizer.zero_grad()
             G_loss.backward()
@@ -210,33 +215,46 @@ def train_gan(epochs=100):
             fake_outputs = fake_outputs.view(-1, 1)
             fake_targets = torch.zeros(fake_inputs.shape[0], 1).to(device)
 
-            D_fake_loss = (adversarial_loss(fake_outputs, fake_targets) + auxiliary_loss(fake_pred, fake_class_labels)) / 2
+            D_fake_loss = (adversarial_loss(fake_outputs, fake_targets) + auxiliary_loss(fake_pred,
+                                                                                         fake_class_labels)) / 2
 
             # Discriminator total loss
             D_loss = (D_real_loss + D_fake_loss) / 2
 
             # Calculate Discriminator accuracy
             pred = np.concatenate([real_pred.data.cpu().numpy(), fake_pred.data.cpu().numpy()], axis=0)
-            gt = np.concatenate([class_labels.data.cpu().numpy(), fake_class_labels.data.cpu().numpy()], axis=0)
-            d_acc = np.mean(np.argmax(pred, axis=1) == gt)
+            ground_truth = np.concatenate([class_labels.data.cpu().numpy(), fake_class_labels.data.cpu().numpy()],
+                                          axis=0)
+
+            D_predictions = np.argmax(pred, axis=1)
+
+            D_accuracy = np.mean(D_predictions == ground_truth)
+
+            # print("==============================")
+            acc = metrics.accuracy_score(ground_truth, D_predictions)
+            # print("Precision {:.5f}".format(metrics.precision_score(ground_truth, D_predictions, average='macro')))
+            # print("F1-score {:.5f}".format(metrics.f1_score(ground_truth, D_predictions, average='macro')))
+            # print("Recall-score {:.5f}".format(metrics.recall_score(ground_truth, D_predictions, average='macro')))
+            # print("G-Mean {:.5f}".format(geometric_mean_score(ground_truth, D_predictions, correction=0.0001)))
+            # print("==============================\n")
 
             D_optimizer.zero_grad()
             D_loss.backward()
             D_optimizer.step()
 
-            print(
-                "[Epoch %d/%d] [Batch %d/%d] [D loss: %f, acc: %d%%] [G loss: %f]"
-                % (epoch, epochs, idx, len(train_loader), D_loss.item(), 100 * d_acc, G_loss.item())
-            )
-
             if idx % 100 == 0 or idx == len(train_loader):
                 epoch_D_loss.append(D_loss.item())
                 epoch_G_loss.append(G_loss.item())
-                epoch_D_acc.append(d_acc)
+                epoch_D_acc.append(D_accuracy)
+                epoch_acc.append(acc)
 
-        print('Epoch {} -- Discriminator mean Accuracy: {:.5f}'.format(epoch, mean(epoch_D_acc)))
-        print('Epoch {} -- Discriminator mean loss: {:.5f}'.format(epoch, mean(epoch_D_loss)))
-        print('Epoch {} -- Generator mean loss: {:.5f}'.format(epoch, mean(epoch_G_loss)))
+        print(
+            "[Epoch %d/%d] [D loss: %f, acc: %d%%] [G loss: %f]"
+            % (epoch, epochs, mean(epoch_D_loss), 100 * mean(epoch_D_acc), mean(epoch_G_loss))
+        )
+        # print('Epoch {} -- Discriminator mean Accuracy: {:.5f}'.format(epoch, mean(epoch_D_acc)))
+        # print('Epoch {} -- Discriminator mean loss: {:.5f}'.format(epoch, mean(epoch_D_loss)))
+        # print('Epoch {} -- Generator mean loss: {:.5f}'.format(epoch, mean(epoch_G_loss)))
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         mean_D_loss.append(mean(epoch_D_loss))
         mean_G_loss.append(mean(epoch_G_loss))
@@ -263,7 +281,8 @@ def train_gan(epochs=100):
     plt.show()
 
     torch.save(G, 'ac_gan/AC_GAN_Generator_save.pth')
-    print('Generator saved.')
+    torch.save(D, 'ac_gan/AC_GAN_Discriminator_save.pth')
+    print('Generator and Discriminator saved.')
 
 
 """
@@ -311,7 +330,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, label=0)
     return synthetic_data, real_data
 
 
-def generate_30000_samples_per_class():
+def generate_30K_samples_per_class():
     ## For each class, generate 30000 synthetic samples
     synthetic_data0, _ = generate_synthetic_samples(num_of_samples=30000, label=0)
     synthetic_data1, _ = generate_synthetic_samples(num_of_samples=30000, label=1)
@@ -332,7 +351,7 @@ def generate_30000_samples_per_class():
     return final_df
 
 
-def generate_samples_to_reach_30000_per_class():
+def generate_samples_to_reach_30K_per_class():
     ## For each class, generate that many synthetic samples to reach 30000 so that we have a balanced dataset.
     """
     Label Distribution:
@@ -382,10 +401,39 @@ def evaluate_synthetic_data(synthetic_data):
     # print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
 
-train_gan(epochs=100)
+def predict_bot_class():
+    """
+    Use trained Discriminator to predict the bot type of unseen original
+    and synthetic data and evaluate its performance.
+    """
+
+    test_original_data = pickle.load(open('../data/test_multiclass_data', 'rb'))
+    # Get the label from our data
+    ground_truth = test_original_data['label']
+
+    test_original_data = test_original_data.drop('label', axis=1)
+
+    discriminator = torch.load('ac_gan/AC_GAN_Discriminator_save.pth')
+
+    _, predictions = discriminator(test_original_data)
+
+    D_predictions = np.argmax(predictions, axis=1)
+
+    print("~~~~~~~~~~~~~~ Discriminator Performance ~~~~~~~~~~~~~~~~")
+    print("Accuracy {:.5f}".format(metrics.accuracy_score(ground_truth, D_predictions)))
+    print("Precision {:.5f}".format(metrics.precision_score(ground_truth, D_predictions, average='macro')))
+    print("F1-score {:.5f}".format(metrics.f1_score(ground_truth, D_predictions, average='macro')))
+    print("Recall-score {:.5f}".format(metrics.recall_score(ground_truth, D_predictions, average='macro')))
+    print("G-Mean {:.5f}".format(geometric_mean_score(ground_truth, D_predictions, correction=0.0001)))
+    print("==============================\n")
+
+
+# train_gan(epochs=300)
+
+print('\n~~~~~~~~~~~~~~ Evaluating method of creating 30K new samples for each class ~~~~~~~~~~~~~~')
+evaluate_synthetic_data(synthetic_data=generate_30K_samples_per_class())
+
 """
-print('\n~~~~~~~~~~~~~~ Evaluating method of creating 30000 new samples for each class ~~~~~~~~~~~~~~')
-evaluate_synthetic_data(synthetic_data=generate_30000_samples_per_class())
 print('\n~~~~~~~~~~~~~~ Evaluating method of creating a balanced dataset ~~~~~~~~~~~~~~')
-evaluate_synthetic_data(synthetic_data=generate_samples_to_reach_30000_per_class())
+evaluate_synthetic_data(synthetic_data=generate_samples_to_reach_30K_per_class())
 """

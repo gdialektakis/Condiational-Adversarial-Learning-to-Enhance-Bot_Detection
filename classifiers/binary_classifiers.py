@@ -104,53 +104,19 @@ def train_and_test_on_original_data():
     # run_classifiers(X_adasyn, X_test, y_adasyn, y_test)
 
 
-def train_on_original_and_test_on_synthetic_data():
-    df = pickle.load(open('../data/train_binary_data', 'rb'))
-    synthetic_data = pickle.load(
-        open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_balanced_per_class', 'rb'))
-    synthetic_data = synthetic_data.sample(frac=1)
-
-    y_train = df['label']
-    y_test = synthetic_data['label']
-    print(df['label'].value_counts())
-    print(synthetic_data['label'].value_counts())
-
-    # Drop unwanted columns
-    df = df.drop(['label'], axis=1)
-    synthetic_data = synthetic_data.drop(['label'], axis=1)
-
-    # split the labeled tweets into train and test set
-    X_train = df
-    X_test = synthetic_data
-
-    # Scale our data in the range of (0, 1)
-    scaler = MinMaxScaler()
-    X_train = scaler.fit_transform(X=X_train)
-    X_test = scaler.transform(X=X_test)
-
-    y_train = y_train.astype('int')
-    y_test = y_test.astype('int')
-
-    print('\n~~~~~~~~ Running Classifiers ~~~~~~~~~~~~~~~')
-    run_classifiers(X_train, X_test, y_train, y_test)
-
-
 def train_on_original_and_test_on_augmented_data(cgan=False):
-    print('\n ~~~~~~~~~~~ Train on Original and Test on Augmented Data ~~~~~~~~~~~~~\n')
-    if cgan:
-        print('--------- Generated Data from CGAN ----------')
-        synthetic_data_balanced = pickle.load(
-            open('../data/synthetic_data/conditional_gan/synthetic_binary_data', 'rb'))
-    else:
-        print('--------- Generated Data from Simple GAN ----------')
-        synthetic_data_balanced = pickle.load(
-            open('../data/synthetic_data/simple_gan/synthetic_binary_data', 'rb'))
-
     train_original_data = pickle.load(open('../data/train_binary_data', 'rb'))
-
     original_test_data = pickle.load(open('../data/test_binary_data', 'rb'))
 
-    synthetic_test_data = synthetic_data_balanced.sample(n=13688)
+    if cgan:
+        print('\n ~~~~~~~~~~~ Train on Original and Test on Augmented CGAN Data ~~~~~~~~~~~~~\n')
+        synthetic_test_data = pickle.load(
+            open('../data/synthetic_data/conditional_gan/synthetic_binary_test_data', 'rb'))
+    else:
+        print('\n ~~~~~~~~~~~ Train on Original and Test on Augmented GAN Data ~~~~~~~~~~~~~\n')
+        synthetic_test_data = pickle.load(
+            open('../data/synthetic_data/gan/synthetic_binary_test_data', 'rb'))
+
     test_data = synthetic_test_data.append(original_test_data)
     test_data = test_data.sample(frac=1)
 
@@ -178,18 +144,17 @@ def train_on_original_and_test_on_augmented_data(cgan=False):
 
 
 def train_on_augmented_and_test_on_original_data(cgan=False):
-    print('\n ~~~~~~~~~~~~~~~ Train with Augmented Data and Test on Original ~~~~~~~~~~~~~~~~')
     # print('\n---------------- Training with 30000 new synthetic samples for each class  -------------------')
     train_original_data = pickle.load(open('../data/train_binary_data', 'rb'))
 
     if cgan:
-        print('--------- Generated Data from CGAN ----------')
+        print('\n ~~~~~~~~~~~~~~~ Train with Augmented CGAN Data and Test on Original ~~~~~~~~~~~~~~~~')
         synthetic_data = pickle.load(
-            open('../data/synthetic_data/conditional_gan/synthetic_binary_data', 'rb'))
+            open('../data/synthetic_data/conditional_gan/synthetic_binary_train_data', 'rb'))
     else:
-        print('--------- Generated Data from Simple GAN ----------')
+        print('\n ~~~~~~~~~~~~~~~ Train with Augmented GAN Data and Test on Original ~~~~~~~~~~~~~~~~')
         synthetic_data = pickle.load(
-            open('../data/synthetic_data/simple_gan/synthetic_binary_data', 'rb'))
+            open('../data/synthetic_data/simple_gan/synthetic_binary_train_data', 'rb'))
 
     synthetic_data = synthetic_data.sample(frac=1)
     augmented_df = train_original_data.append(synthetic_data)
@@ -228,64 +193,32 @@ def train_on_augmented_and_test_on_original_data(cgan=False):
     run_classifiers(X_train, X_test, y_train, y_test)
 
 
-def train_on_augmented_and_test_on_synthetic_data():
-    print('\n ~~~~~~~~~~~ Train on Augmented and Testing on Synthetic Data ~~~~~~~~~~~~~\n')
+def train_and_test_on_augmented_data(train_cgan=False, test_cgan=False):
 
-    train_original_data = pickle.load(open('../data/train_binary_data', 'rb'))
-    synthetic_data_30K = pickle.load(
-        open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30000_per_class', 'rb'))
-    synthetic_data_balanced = pickle.load(
-        open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_balanced_per_class', 'rb'))
-
-    synthetic_data_train = synthetic_data_30K.sample(frac=1)
-
-    augmented_df = train_original_data.append(synthetic_data_train)
-    augmented_df = augmented_df.sample(frac=1)
-
-    test_data = synthetic_data_balanced.sample(frac=1)
-
-    y_train = augmented_df['label']
-    y_test = test_data['label']
-    print(augmented_df['label'].value_counts())
-    print(test_data['label'].value_counts())
-
-    # Drop label column
-    augmented_df = augmented_df.drop(['label'], axis=1)
-    test_data = test_data.drop(['label'], axis=1)
-
-    # split the labeled tweets into train and test set
-    X_train = augmented_df
-    X_test = test_data
-
-    # Scale our data in the range of (0, 1)
-    scaler = MinMaxScaler()
-    X_train = scaler.fit_transform(X=X_train)
-    X_test = scaler.transform(X=X_test)
-
-    y_train = y_train.astype('int')
-    y_test = y_test.astype('int')
-
-    print('\n~~~~~~~~ Running Classifiers ~~~~~~~~~~~~~~~')
-    run_classifiers(X_train, X_test, y_train, y_test)
-
-
-def train_and_test_on_augmented_data(cgan=False):
-    print('\n ~~~~~~~~~~~ Train on Augmented and Testing on Augmented Data ~~~~~~~~~~~~~\n')
-
-    train_original_data = pickle.load(open('../data/train_binary_data', 'rb'))
-    if cgan:
-        print('--------- Generated Data from CGAN ----------')
+    if train_cgan:
         synthetic_data = pickle.load(
-            open('../data/synthetic_data/conditional_gan/synthetic_binary_data', 'rb'))
-        synthetic_test_data = pickle.load(
-            open('../data/synthetic_data/simple_gan/synthetic_binary_data', 'rb')).sample(n=13688)
+            open('../data/synthetic_data/conditional_gan/synthetic_binary_train_data', 'rb'))
+        if test_cgan:
+            print('\n ~~~~~~~~~~~ Train on Augmented CGAN and Test on Augmented CGAN Data ~~~~~~~~~~~~~\n')
+            synthetic_test_data = pickle.load(
+                open('../data/synthetic_data/conditional_gan/synthetic_binary_test_data', 'rb'))
+        else:
+            print('\n ~~~~~~~~~~~ Train on Augmented CGAN and Test on Augmented GAN Data ~~~~~~~~~~~~~\n')
+            synthetic_test_data = pickle.load(
+                open('../data/synthetic_data/gan/synthetic_binary_test_data', 'rb'))
     else:
-        print('--------- Generated Data from Simple GAN ----------')
         synthetic_data = pickle.load(
-            open('../data/synthetic_data/simple_gan/synthetic_binary_data', 'rb'))
-        synthetic_test_data = pickle.load(
-            open('../data/synthetic_data/conditional_gan/synthetic_binary_data', 'rb')).sample(n=13688)
+            open('../data/synthetic_data/gan/synthetic_binary_train_data', 'rb'))
+        if test_cgan:
+            print('\n ~~~~~~~~~~~ Train on Augmented GAN and Test on Augmented CGAN Data ~~~~~~~~~~~~~\n')
+            synthetic_test_data = pickle.load(
+                open('../data/synthetic_data/conditional_gan/synthetic_binary_test_data', 'rb'))
+        else:
+            print('\n ~~~~~~~~~~~ Train on Augmented GAN and Test on Augmented GAN Data ~~~~~~~~~~~~~\n')
+            synthetic_test_data = pickle.load(
+                open('../data/synthetic_data/gan/synthetic_binary_test_data', 'rb'))
 
+    train_original_data = pickle.load(open('../data/train_binary_data', 'rb'))
     synthetic_data_train = synthetic_data.sample(frac=1)
     augmented_df = train_original_data.append(synthetic_data_train)
     augmented_df = augmented_df.sample(frac=1)
@@ -325,9 +258,7 @@ print('------- Binary Bot Detection --------')
 # Train on Augmented Data
 # train_and_test_on_augmented_data(cgan=True)
 # train_on_augmented_and_test_on_original_data(cgan=True)
-# train_on_augmented_and_test_on_synthetic_data()
 
 # Train on Original Data
 # train_and_test_on_original_data()
-# train_on_original_and_test_on_augmented_data(cgan=True)
-# train_on_original_and_test_on_synthetic_data()
+train_on_original_and_test_on_augmented_data(cgan=False)
