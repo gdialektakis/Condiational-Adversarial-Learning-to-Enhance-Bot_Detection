@@ -71,8 +71,8 @@ def run_classifiers(X_train, X_test, y_train, y_test):
 
 def train_and_test_on_original_data():
     print('~~~~~~~~~~ Train and Test on Original Data')
-    train_data = pickle.load(open('../data/train_binary_data', 'rb'))
-    test_data = pickle.load(open('../data/test_binary_data', 'rb'))
+    train_data = pickle.load(open('../data/original_data/train_binary_data', 'rb'))
+    test_data = pickle.load(open('../data/original_data/test_binary_data', 'rb'))
 
     y_train = train_data['label']
     y_test = test_data['label']
@@ -105,8 +105,8 @@ def train_and_test_on_original_data():
 
 
 def train_on_original_and_test_on_augmented_data(cgan=False):
-    train_original_data = pickle.load(open('../data/train_binary_data', 'rb'))
-    original_test_data = pickle.load(open('../data/test_binary_data', 'rb'))
+    train_original_data = pickle.load(open('../data/original_data/train_binary_data', 'rb'))
+    original_test_data = pickle.load(open('../data/original_data/test_binary_data', 'rb'))
 
     if cgan:
         print('\n ~~~~~~~~~~~ Train on Original and Test on Augmented CGAN Data ~~~~~~~~~~~~~\n')
@@ -145,7 +145,7 @@ def train_on_original_and_test_on_augmented_data(cgan=False):
 
 def train_on_augmented_and_test_on_original_data(cgan=False):
     # print('\n---------------- Training with 30000 new synthetic samples for each class  -------------------')
-    train_original_data = pickle.load(open('../data/train_binary_data', 'rb'))
+    train_original_data = pickle.load(open('../data/original_data/train_binary_data', 'rb'))
 
     if cgan:
         print('\n ~~~~~~~~~~~~~~~ Train with Augmented CGAN Data and Test on Original ~~~~~~~~~~~~~~~~')
@@ -169,7 +169,7 @@ def train_on_augmented_and_test_on_original_data(cgan=False):
     X_train = augmented_df
     y_train = y
 
-    test_df = pickle.load(open('../data/test_binary_data', 'rb'))
+    test_df = pickle.load(open('../data/original_data/test_binary_data', 'rb'))
 
     y_test = test_df['label']
     print(test_df['label'].value_counts())
@@ -218,12 +218,12 @@ def train_and_test_on_augmented_data(train_cgan=False, test_cgan=False):
             synthetic_test_data = pickle.load(
                 open('../data/synthetic_data/gan/synthetic_binary_test_data', 'rb'))
 
-    train_original_data = pickle.load(open('../data/train_binary_data', 'rb'))
+    train_original_data = pickle.load(open('../data/original_data/train_binary_data', 'rb'))
     synthetic_data_train = synthetic_data.sample(frac=1)
     augmented_df = train_original_data.append(synthetic_data_train)
     augmented_df = augmented_df.sample(frac=1)
 
-    original_test_data = pickle.load(open('../data/test_binary_data', 'rb'))
+    original_test_data = pickle.load(open('../data/original_data/test_binary_data', 'rb'))
     print(original_test_data['label'].value_counts())
 
     test_data = synthetic_test_data.append(original_test_data)

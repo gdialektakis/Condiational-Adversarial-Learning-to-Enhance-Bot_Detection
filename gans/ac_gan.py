@@ -92,7 +92,7 @@ class Generator(nn.Module):
         return out.view(-1, 1, 1, self.num_features)
 
 
-def prepare_data(df=pickle.load(open('../data/train_multiclass_data', 'rb')), batch_size=256):
+def prepare_data(df=pickle.load(open('../data/original_data/train_multiclass_data', 'rb')), batch_size=256):
     # df = df.sample(n=1000)
 
     # print(df['label'].value_counts())
@@ -383,7 +383,7 @@ def generate_samples_to_reach_30K_per_class():
 
 
 def evaluate_synthetic_data(synthetic_data):
-    real_data = pickle.load(open('../data/train_multiclass_data', 'rb'))
+    real_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
 
     print('\n~~~~~~~~~~~~~~ Synthetic Data Evaluation ~~~~~~~~~~~~~~')
 
@@ -393,7 +393,7 @@ def evaluate_synthetic_data(synthetic_data):
     # kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
     # print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
-    real_data = pickle.load(open('../data/test_multiclass_data', 'rb'))
+    real_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
     print('\n----------- Comparing synthetic to test real data ----------- ')
     ks = KSTest.compute(synthetic_data, real_data)
     print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
@@ -407,7 +407,7 @@ def predict_bot_class():
     and synthetic data and evaluate its performance.
     """
 
-    test_original_data = pickle.load(open('../data/test_multiclass_data', 'rb'))
+    test_original_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
     # Get the label from our data
     ground_truth = test_original_data['label']
 

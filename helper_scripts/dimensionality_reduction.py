@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 import pickle
 
 
-def dimensionality_reduction(data=pickle.load(open('../data/multi_class_data', 'rb'))):
+def dimensionality_reduction(data=pickle.load(open('../data/original_data/multi_class_data', 'rb'))):
     data = data.reset_index(drop=True)
     # summarize class distribution
     print('Bot types distribution:' + '\n', data['label'].value_counts())

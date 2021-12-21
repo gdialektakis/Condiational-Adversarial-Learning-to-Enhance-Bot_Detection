@@ -70,8 +70,8 @@ def run_classifiers(X_train, X_test, y_train, y_test):
 
 
 def train_and_test_on_original_data():
-    train_data = pickle.load(open('../data/train_multiclass_data', 'rb'))
-    test_data = pickle.load(open('../data/test_multiclass_data', 'rb'))
+    train_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
+    test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
 
     y_train = train_data['label']
     y_test = test_data['label']
@@ -104,7 +104,7 @@ def train_and_test_on_original_data():
 
 
 def train_on_original_and_test_on_synthetic_data():
-    df = pickle.load(open('../data/train_multiclass_data', 'rb'))
+    df = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
     synthetic_data = pickle.load(
         open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_balanced_per_class', 'rb'))
     synthetic_data = synthetic_data.sample(frac=1)
@@ -137,11 +137,11 @@ def train_on_original_and_test_on_synthetic_data():
 def train_on_original_and_test_on_augmented_data():
     print('\n ~~~~~~~~~~~ Train on Original and Test on Augmented Data ~~~~~~~~~~~~~\n')
 
-    df = pickle.load(open('../data/train_multiclass_data', 'rb'))
+    df = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
     synthetic_data_balanced = pickle.load(
         open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_balanced_per_class', 'rb'))
 
-    original_test_data = pickle.load(open('../data/test_multiclass_data', 'rb'))
+    original_test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
 
     synthetic_test_data = synthetic_data_balanced.sample(n=13000)
     test_data = synthetic_test_data.append(original_test_data)
@@ -175,7 +175,7 @@ def train_on_augmented_and_test_on_original_data(ac_gan=False):
     print('\n ~~~~~~~~~~~~~~~ Train with Augmented Data and Test on Original ~~~~~~~~~~~~~~~~')
     print('\n---------------- Training with 30000 new synthetic samples for each class  -------------------')
 
-    df = pickle.load(open('../data/train_multiclass_data', 'rb'))
+    df = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
     if ac_gan:
         synthetic_data = pickle.load(
             open('../data/synthetic_data/ac_gan/synthetic_data_30000_per_class', 'rb'))
@@ -199,7 +199,7 @@ def train_on_augmented_and_test_on_original_data(ac_gan=False):
     X_train = augmented_df
     y_train = y
 
-    test_df = pickle.load(open('../data/test_multiclass_data', 'rb'))
+    test_df = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
 
     y_test = test_df['label']
     print(test_df['label'].value_counts())
@@ -226,7 +226,7 @@ def train_on_augmented_and_test_on_original_data(ac_gan=False):
 def train_on_augmented_and_test_on_synthetic_data():
     print('\n ~~~~~~~~~~~ Train on Augmented and Testing on Synthetic Data ~~~~~~~~~~~~~\n')
 
-    df = pickle.load(open('../data/train_multiclass_data', 'rb'))
+    df = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
     synthetic_data_30K = pickle.load(
         open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30000_per_class', 'rb'))
     synthetic_data_balanced = pickle.load(
@@ -267,7 +267,7 @@ def train_on_augmented_and_test_on_synthetic_data():
 def train_and_test_on_augmented_data():
     print('\n ~~~~~~~~~~~ Train on Augmented and Testing on Augmented Data ~~~~~~~~~~~~~\n')
 
-    df = pickle.load(open('../data/train_multiclass_data', 'rb'))
+    df = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
     synthetic_data_30K = pickle.load(
         open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30000_per_class', 'rb'))
     synthetic_data_balanced = pickle.load(
@@ -277,7 +277,7 @@ def train_and_test_on_augmented_data():
     augmented_df = df.append(synthetic_data_train)
     augmented_df = augmented_df.sample(frac=1)
 
-    original_test_data = pickle.load(open('../data/test_multiclass_data', 'rb'))
+    original_test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
     print(original_test_data['label'].value_counts())
     synthetic_test_data = synthetic_data_balanced.sample(n=13000)
     test_data = synthetic_test_data.append(original_test_data)

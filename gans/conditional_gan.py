@@ -85,8 +85,8 @@ class Generator(nn.Module):
 
 
 def prepare_data(batch_size=512, bots=True):
-    bots_df = pickle.load(open('../data/train_binary_data_bots', 'rb'))
-    humans_df = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+    bots_df = pickle.load(open('../data/original_data/train_binary_data_bots', 'rb'))
+    humans_df = pickle.load(open('../data/original_data/train_binary_data_humans', 'rb'))
 
     # Concatenate human and bot training samples
     pdList = [bots_df, humans_df]
@@ -316,8 +316,8 @@ def create_final_synthetic_dataset(test=False):
 
 
 def evaluate_synthetic_data(synthetic_data):
-    real_data_bots = pickle.load(open('../data/train_binary_data_bots', 'rb'))
-    real_data_humans = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+    real_data_bots = pickle.load(open('../data/original_data/train_binary_data_bots', 'rb'))
+    real_data_humans = pickle.load(open('../data/original_data/train_binary_data_humans', 'rb'))
 
     # Concatenate human and bot synthetic samples
     pdList = [real_data_bots, real_data_humans]

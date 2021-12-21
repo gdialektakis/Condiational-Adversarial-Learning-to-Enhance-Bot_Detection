@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import torch
 
 
-def prepare_multiclass_data(df=pickle.load(open('../data/multi_class_data', 'rb'))):
+def prepare_multiclass_data(df=pickle.load(open('../data/original_data/multi_class_data', 'rb'))):
     # df = df.sample(n=1000)
     df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
 
@@ -19,11 +19,11 @@ def prepare_multiclass_data(df=pickle.load(open('../data/multi_class_data', 'rb'
 
     # Keep 20% of the data for later testing
     train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
-    pickle.dump(test_set, open('../data/test_multiclass_data', 'wb'))
-    pickle.dump(train_set, open('../data/train_multiclass_data', 'wb'))
+    pickle.dump(test_set, open('../data/original_data/test_multiclass_data', 'wb'))
+    pickle.dump(train_set, open('../data/original_data/train_multiclass_data', 'wb'))
 
 
-def prepare_binary_data(data=pickle.load(open('../data/final_data_no_rts_v2', 'rb')), bots=True):
+def prepare_binary_data(data=pickle.load(open('../data/original_data/final_data_no_rts_v2', 'rb')), bots=True):
     df = pd.DataFrame(data)
     df['label'] = df['label'].map({'human': 0, 'bot': 1, 'cyborg': 1})
     # Convert features that are boolean to integers
@@ -51,19 +51,19 @@ def prepare_binary_data(data=pickle.load(open('../data/final_data_no_rts_v2', 'r
 
 def merge_dataframes():
     # This function merges bots and humans into a single dataframe.
-    bots_train = pickle.load(open('../data/train_binary_data_bots', 'rb'))
-    humans_train = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+    bots_train = pickle.load(open('../data/original_data/train_binary_data_bots', 'rb'))
+    humans_train = pickle.load(open('../data/original_data/train_binary_data_humans', 'rb'))
 
     train_data = bots_train.append(humans_train)
     train_data = train_data.sample(frac=1)
-    pickle.dump(train_data, open('../data/train_binary_data', 'wb'))
+    pickle.dump(train_data, open('../data/original_data/train_binary_data', 'wb'))
 
-    bots_test = pickle.load(open('../data/test_binary_data_bots', 'rb'))
-    humans_test = pickle.load(open('../data/test_binary_data_humans', 'rb'))
+    bots_test = pickle.load(open('../data/original_data/test_binary_data_bots', 'rb'))
+    humans_test = pickle.load(open('../data/original_data/test_binary_data_humans', 'rb'))
 
     test_data = bots_test.append(humans_test)
     test_data = test_data.sample(frac=1)
-    pickle.dump(test_data, open('../data/test_binary_data', 'wb'))
+    pickle.dump(test_data, open('../data/original_data/test_binary_data', 'wb'))
 
 
 #prepare_binary_data(bots=True)

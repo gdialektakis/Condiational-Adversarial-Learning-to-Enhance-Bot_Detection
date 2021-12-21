@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 
 def prepare_data():
     # Load our data
-    bot_data = pickle.load(open('../data/final_data_no_rts_v2', 'rb'))
+    bot_data = pickle.load(open('../data/original_data/final_data_no_rts_v2', 'rb'))
     df = pd.DataFrame(bot_data)
 
     # convert labels from string to 0 and 1

@@ -69,9 +69,9 @@ class Generator(nn.Module):
 
 def prepare_data(batch_size=64, bots=True):
     if bots:
-        df = pickle.load(open('../data/train_binary_data_bots', 'rb'))
+        df = pickle.load(open('../data/original_data/train_binary_data_bots', 'rb'))
     else:
-        df = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+        df = pickle.load(open('../data/original_data/train_binary_data_humans', 'rb'))
 
     # df = df.sample(n=100)
 
@@ -234,17 +234,17 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, bots=Tru
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load initial data
-    real_data = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+    real_data = pickle.load(open('../data/original_data/train_binary_data_humans', 'rb'))
 
     # Load the appropriate Generator
     if bots:
         generator = torch.load('simple_gan/Bot_Generator_save.pth')
         # Load initial data
-        real_data = pickle.load(open('../data/train_binary_data_bots', 'rb'))
+        real_data = pickle.load(open('../data/original_data/train_binary_data_bots', 'rb'))
     else:
         generator = torch.load('simple_gan/Human_Generator_save.pth')
         # Load initial data
-        real_data = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+        real_data = pickle.load(open('../data/original_data/train_binary_data_humans', 'rb'))
 
     real_data = real_data.drop(['label'], axis=1)
 
@@ -307,8 +307,8 @@ def create_final_synthetic_dataset(test=False):
 
 def evaluate_synthetic_data(synthetic_data):
     print('~~~~~~~~~ Evaluating synthetic human data ~~~~~~~~~~')
-    real_data_bots = pickle.load(open('../data/train_binary_data_bots', 'rb'))
-    real_data_humans = pickle.load(open('../data/train_binary_data_humans', 'rb'))
+    real_data_bots = pickle.load(open('../data/original_data/train_binary_data_bots', 'rb'))
+    real_data_humans = pickle.load(open('../data/original_data/train_binary_data_humans', 'rb'))
 
     # Concatenate human and bot synthetic samples
     pdList = [real_data_bots, real_data_humans]
