@@ -105,7 +105,7 @@ def train_gan(epochs=100, bots=True):
     """
     G_lr = 0.0002
     D_lr = 0.0002
-    bs = 64
+    bs = 512
     loss = nn.BCELoss()
 
     # Model

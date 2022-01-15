@@ -2,9 +2,7 @@
 Import necessary libraries to create a generative adversarial network
 The code is developed using the PyTorch library
 """
-import os
 import pickle
-import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -21,7 +19,6 @@ from sdv.metrics.tabular import KSTest
 from statistics import mean
 import helper_scripts.transform_booleans as transform_bool
 import warnings
-import seaborn as sns
 
 warnings.filterwarnings('ignore')
 
@@ -36,16 +33,17 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.num_classes = 6
         self.num_features = 310
+        self.prob = 0.2
         # embedding layer of the class labels (num_of_classes * encoding_size of each word)
         self.label_emb = nn.Embedding(self.num_classes, self.num_classes)
 
         self.model = nn.Sequential(
             nn.Linear(self.num_features + self.num_classes, 400),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Dropout(0.2),
+            nn.Dropout(self.prob),
             nn.Linear(400, 1000),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Dropout(0.2),
+            nn.Dropout(self.prob),
             nn.Linear(1000, 1),
             nn.Sigmoid()
         )
@@ -278,42 +276,20 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, label=0)
     synthetic_data = transform_bool.transform(synthetic_data)
     # Map booleans to 1 and 0.
     synthetic_data = synthetic_data.applymap(lambda x: int(x) if isinstance(x, bool) else x)
-    # pickle.dump(synthetic_data, open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data' + str(num_of_samples), 'wb'))
 
     return synthetic_data, real_data
 
 
-def generate_30000_samples_per_class():
-    ## For each class, generate 30000 synthetic samples
-    synthetic_data0, _ = generate_synthetic_samples(num_of_samples=30000, label=0)
-    synthetic_data1, _ = generate_synthetic_samples(num_of_samples=30000, label=1)
-    synthetic_data2, _ = generate_synthetic_samples(num_of_samples=30000, label=2)
-    synthetic_data3, _ = generate_synthetic_samples(num_of_samples=30000, label=3)
-    synthetic_data4, _ = generate_synthetic_samples(num_of_samples=30000, label=4)
-    synthetic_data5, _ = generate_synthetic_samples(num_of_samples=30000, label=5)
-
-    # List of above dataframes
-    pdList = [synthetic_data0, synthetic_data1, synthetic_data2, synthetic_data3, synthetic_data4, synthetic_data5]
-    final_df = pd.concat(pdList)
-
-    # Shuffle the dataframe
-    final_df = final_df.sample(frac=1)
-
-    pickle.dump(final_df,
-                open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30000_per_class', 'wb'))
-    return final_df
-
-
-def generate_samples_to_reach_30000_per_class():
+def generate_samples_to_reach_30K_per_class():
     ## For each class, generate that many synthetic samples to reach 30000 so that we have a balanced dataset.
     """
     Label Distribution:
     0    24403
-    3    13283
     1     9333
-    5     4703
-    4      958
     2      408
+    3    13283
+    4      958
+    5     4703
     """
     ## For each class, generate that many samples to reach 30000 samples
     synthetic_data0, _ = generate_synthetic_samples(num_of_samples=30000 - 24403, label=0)
@@ -331,32 +307,132 @@ def generate_samples_to_reach_30000_per_class():
     final_df = final_df.sample(frac=1)
 
     pickle.dump(final_df,
-                open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_balanced_per_class', 'wb'))
+                open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30K_per_class_norm', 'wb'))
     return final_df
 
 
-def evaluate_synthetic_data(synthetic_data):
+def generate_2to1_synthetic_samples():
+    ## For each class, generate 2:1 synthetic samples, except humans.
+    """
+    Label Distribution:
+    0    24403
+    1     9333
+    2      408
+    3    13283
+    4      958
+    5     4703
+    """
+    ## For each class, generate that many samples to reach 30000 samples
+    synthetic_data1, _ = generate_synthetic_samples(num_of_samples=2*9333, label=1)
+    synthetic_data2, _ = generate_synthetic_samples(num_of_samples=2*408, label=2)
+    synthetic_data3, _ = generate_synthetic_samples(num_of_samples=2*13283, label=3)
+    synthetic_data4, _ = generate_synthetic_samples(num_of_samples=2*958, label=4)
+    synthetic_data5, _ = generate_synthetic_samples(num_of_samples=2*4703, label=5)
+
+    # List of above dataframes
+    pdList = [synthetic_data1, synthetic_data2, synthetic_data3, synthetic_data4, synthetic_data5]
+    final_df = pd.concat(pdList)
+
+    # Shuffle the dataframe
+    final_df = final_df.sample(frac=1)
+
+    pickle.dump(final_df,
+                open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'wb'))
+    return final_df
+
+
+def generate_test_synthetic_data(two_to_one=False):
+    if two_to_one:
+        ## For each class, generate 2200 samples for testing
+        synthetic_data0, _ = generate_synthetic_samples(num_of_samples=2200, label=0)
+        synthetic_data1, _ = generate_synthetic_samples(num_of_samples=2200, label=1)
+        synthetic_data2, _ = generate_synthetic_samples(num_of_samples=2200, label=2)
+        synthetic_data3, _ = generate_synthetic_samples(num_of_samples=2200, label=3)
+        synthetic_data4, _ = generate_synthetic_samples(num_of_samples=2200, label=4)
+        synthetic_data5, _ = generate_synthetic_samples(num_of_samples=2200, label=5)
+        filename = 'synthetic_test_data_balanced'
+    else:
+
+        """
+        Original Test Data Label Distribution:
+        0    6032
+        3    3431
+        1    2306
+        5    1177
+        4     239
+        2     88
+        """
+        ## For each class, generate that many samples to reach 30000 samples
+        synthetic_data0, _ = generate_synthetic_samples(num_of_samples=6032, label=0)
+        synthetic_data1, _ = generate_synthetic_samples(num_of_samples=2306, label=1)
+        synthetic_data2, _ = generate_synthetic_samples(num_of_samples=88, label=2)
+        synthetic_data3, _ = generate_synthetic_samples(num_of_samples=3431, label=3)
+        synthetic_data4, _ = generate_synthetic_samples(num_of_samples=239, label=4)
+        synthetic_data5, _ = generate_synthetic_samples(num_of_samples=1177, label=5)
+
+        filename = 'synthetic_test_data'
+
+    # List of above dataframes
+    pdList = [synthetic_data0, synthetic_data1, synthetic_data2, synthetic_data3, synthetic_data4, synthetic_data5]
+    final_df = pd.concat(pdList)
+
+    # Shuffle the dataframe
+    final_df = final_df.sample(frac=1)
+
+    pickle.dump(final_df, open('../data/synthetic_data/conditional_gan_multiclass/' + filename, 'wb'))
+    return final_df
+
+
+def evaluate_synthetic_data():
     real_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
+    scaler = joblib.load("conditional_gan/scaler.save")
+    real_data = real_data.drop(['label'], axis=1)
+    column_names = real_data.columns
+    real_data = scaler.transform(real_data)
+    test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
+    test_data = test_data.drop(['label'], axis=1)
+    test_data = scaler.transform(test_data)
+
+    real_data = pd.DataFrame(data=real_data, columns=column_names)
+    test_data = pd.DataFrame(data=test_data, columns=column_names)
 
     print('\n~~~~~~~~~~~~~~ Synthetic Data Evaluation ~~~~~~~~~~~~~~')
 
-    print('\n----------- Comparing synthetic to train real data ----------- ')
+    print('\n~~~~~~~~~~~~~~ Evaluating method of creating that many samples to reach 100K per class ~~~~~~~~~~~~~~')
+    synthetic_data = pickle.load(
+        open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30K_per_class_norm', 'rb'))
+
+    synthetic_data = synthetic_data.drop(['label'], axis=1)
+
     ks = KSTest.compute(synthetic_data, real_data)
-    print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
+    ks_test_data = KSTest.compute(synthetic_data, test_data)
+    print('Inverted Kolmogorov-Smirnov D statistic on Train Data: {}'.format(ks))
+    print('Inverted Kolmogorov-Smirnov D statistic on Test Data: {}'.format(ks_test_data))
+
     #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
     #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
-    real_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
-    print('\n----------- Comparing synthetic to test real data ----------- ')
+    print('\n~~~~~~~~~~~~~~ Evaluating method of creating two to one synthetic samples  per class ~~~~~~~~~~~~~~')
+    synthetic_data = pickle.load(
+        open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'rb'))
+
+    synthetic_data = synthetic_data.drop(['label'], axis=1)
+
     ks = KSTest.compute(synthetic_data, real_data)
-    print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
+    ks_test_data = KSTest.compute(synthetic_data, test_data)
+    print('Inverted Kolmogorov-Smirnov D statistic on Train Data: {}'.format(ks))
+    print('Inverted Kolmogorov-Smirnov D statistic on Test Data: {}'.format(ks_test_data))
+
     #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
     #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
 
 #train_gan(epochs=300)
 
-print('\n~~~~~~~~~~~~~~ Evaluating method of creating 30000 new samples for each class ~~~~~~~~~~~~~~')
-evaluate_synthetic_data(synthetic_data=generate_30000_samples_per_class())
-print('\n~~~~~~~~~~~~~~ Evaluating method of creating a balanced dataset ~~~~~~~~~~~~~~')
-evaluate_synthetic_data(synthetic_data=generate_samples_to_reach_30000_per_class())
+generate_samples_to_reach_30K_per_class()
+#generate_2to1_synthetic_samples()
+
+evaluate_synthetic_data()
+
+#generate_test_synthetic_data(balanced=False)
+

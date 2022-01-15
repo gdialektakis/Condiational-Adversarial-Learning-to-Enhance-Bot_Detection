@@ -18,7 +18,33 @@ import warnings
 warnings.filterwarnings("ignore", category=Warning)
 
 
+def results_to_df(accuracy, precision, f1_score, recall, g_mean):
+    df = pd.DataFrame(
+        columns=['Naive Bayes', 'Logistic Regression', 'Random Forest', 'SVM', 'Voting', 'Bagging', 'Adaboost'])
+
+    acc_series = pd.Series(accuracy, index=df.columns)
+    prec_series = pd.Series(precision, index=df.columns)
+    f1_series = pd.Series(f1_score, index=df.columns)
+    rec_series = pd.Series(recall, index=df.columns)
+    gm_series = pd.Series(g_mean, index=df.columns)
+
+    df = df.append(acc_series, ignore_index=True)
+    df = df.append(prec_series, ignore_index=True)
+    df = df.append(f1_series, ignore_index=True)
+    df = df.append(rec_series, ignore_index=True)
+    df = df.append(gm_series, ignore_index=True)
+
+    df.index = ['Accuracy', 'Precision', 'F1 score', 'Recall', 'G-Mean']
+
+    return df
+
+
 def run_classifiers(X_train, X_test, y_train, y_test):
+    acc = []
+    prec = []
+    f1 = []
+    rec = []
+    g_m = []
     for classifier_name in ["bayes", "logreg", "rand_forest", "svm", "voting", "bagging", "adaboost"]:
         if classifier_name == "logreg":
             classifier = LogisticRegression(max_iter=1000, n_jobs=-1)
@@ -60,13 +86,27 @@ def run_classifiers(X_train, X_test, y_train, y_test):
         y_pred = classifier.predict(X_test)
 
         print("==============================")
+
+        accuracy = round(metrics.accuracy_score(y_test, y_pred), 5)
+        acc.append(accuracy)
+        precision = round(metrics.precision_score(y_test, y_pred), 5)
+        prec.append(precision)
+        f1_score = round(metrics.f1_score(y_test, y_pred), 5)
+        f1.append(f1_score)
+        recall = round(metrics.recall_score(y_test, y_pred), 5)
+        rec.append(recall)
+        g_mean = round(geometric_mean_score(y_test, y_pred, correction=0.0001, average='binary'), 5)
+        g_m.append(g_mean)
+
         print('Results for {:}'.format(classifier))
-        print("Accuracy {:.5f}".format(metrics.accuracy_score(y_test, y_pred)))
-        print("Precision {:.5f}".format(metrics.precision_score(y_test, y_pred, average='macro')))
-        print("F1-score {:.5f}".format(metrics.f1_score(y_test, y_pred, average='macro')))
-        print("Recall-score {:.5f}".format(metrics.recall_score(y_test, y_pred, average='macro')))
-        print("G-Mean {:.5f}".format(geometric_mean_score(y_test, y_pred, correction=0.0001)))
+        print("Accuracy {:.5f}".format(accuracy))
+        print("Precision {:.5f}".format(precision))
+        print("F1-score {:.5f}".format(f1_score))
+        print("Recall-score {:.5f}".format(recall))
+        print("G-Mean {:.5f}".format(g_mean))
         print("==============================\n")
+
+    return acc, prec, f1, rec, g_m
 
 
 def train_and_test_on_original_data():
@@ -98,8 +138,10 @@ def train_and_test_on_original_data():
     print("Label distribution after ADASYN: {}\n".format(Counter(y_adasyn)))
 
     print('\n~~~~~~~~ Running Classifiers ~~~~~~~~~~~~~~~')
-    run_classifiers(X_train, X_test, y_train, y_test)
+    acc, prec, f1, rec, g_m = run_classifiers(X_train, X_test, y_train, y_test)
 
+    df = results_to_df(acc, prec, f1, rec, g_m)
+    df.to_csv('train_and_test_on_original_data_results.csv')
     # print('\n~~~~~~~~ Running Classifiers with ADASYN ~~~~~~~~~~~~~~~')
     # run_classifiers(X_adasyn, X_test, y_adasyn, y_test)
 
@@ -112,10 +154,12 @@ def train_on_original_and_test_on_augmented_data(cgan=False):
         print('\n ~~~~~~~~~~~ Train on Original and Test on Augmented CGAN Data ~~~~~~~~~~~~~\n')
         synthetic_test_data = pickle.load(
             open('../data/synthetic_data/conditional_gan/synthetic_binary_test_data', 'rb'))
+        filename = 'binary_results/train_on_original_and_test_on_augmented_cgan_data.csv'
     else:
         print('\n ~~~~~~~~~~~ Train on Original and Test on Augmented GAN Data ~~~~~~~~~~~~~\n')
         synthetic_test_data = pickle.load(
-            open('../data/synthetic_data/gan/synthetic_binary_test_data', 'rb'))
+            open('../data/synthetic_data/simple_gan/synthetic_binary_test_data', 'rb'))
+        filename = 'train_on_original_and_test_on_augmented_gan_data,csv'
 
     test_data = synthetic_test_data.append(original_test_data)
     test_data = test_data.sample(frac=1)
@@ -140,7 +184,10 @@ def train_on_original_and_test_on_augmented_data(cgan=False):
     y_test = y_test.astype('int')
 
     print('\n~~~~~~~~ Running Classifiers ~~~~~~~~~~~~~~~')
-    run_classifiers(X_train, X_test, y_train, y_test)
+    acc, prec, f1, rec, g_m = run_classifiers(X_train, X_test, y_train, y_test)
+
+    df = results_to_df(acc, prec, f1, rec, g_m)
+    df.to_csv(filename)
 
 
 def train_on_augmented_and_test_on_original_data(cgan=False):
@@ -151,10 +198,13 @@ def train_on_augmented_and_test_on_original_data(cgan=False):
         print('\n ~~~~~~~~~~~~~~~ Train with Augmented CGAN Data and Test on Original ~~~~~~~~~~~~~~~~')
         synthetic_data = pickle.load(
             open('../data/synthetic_data/conditional_gan/synthetic_binary_train_data', 'rb'))
+        filename = 'binary_results/train_on_augmented_cgan_and_test_on_original_data.csv'
+
     else:
         print('\n ~~~~~~~~~~~~~~~ Train with Augmented GAN Data and Test on Original ~~~~~~~~~~~~~~~~')
         synthetic_data = pickle.load(
             open('../data/synthetic_data/simple_gan/synthetic_binary_train_data', 'rb'))
+        filename = 'binary_results/train_on_augmented_gan_and_test_on_original_data.csv'
 
     synthetic_data = synthetic_data.sample(frac=1)
     augmented_df = train_original_data.append(synthetic_data)
@@ -190,11 +240,14 @@ def train_on_augmented_and_test_on_original_data(cgan=False):
     print("\nLabel distribution: {}".format(Counter(y_train)))
 
     print('\n~~~~~~~~ Running Classifiers ~~~~~~~~~~~~~~~')
-    run_classifiers(X_train, X_test, y_train, y_test)
+    acc, prec, f1, rec, g_m = run_classifiers(X_train, X_test, y_train, y_test)
+
+    df = results_to_df(acc, prec, f1, rec, g_m)
+    df.to_csv(filename)
 
 
 def train_and_test_on_augmented_data(train_cgan=False, test_cgan=False):
-
+    filename = ''
     if train_cgan:
         synthetic_data = pickle.load(
             open('../data/synthetic_data/conditional_gan/synthetic_binary_train_data', 'rb'))
@@ -202,21 +255,23 @@ def train_and_test_on_augmented_data(train_cgan=False, test_cgan=False):
             print('\n ~~~~~~~~~~~ Train on Augmented CGAN and Test on Augmented CGAN Data ~~~~~~~~~~~~~\n')
             synthetic_test_data = pickle.load(
                 open('../data/synthetic_data/conditional_gan/synthetic_binary_test_data', 'rb'))
+            filename = 'train_cgan_and_test_on_augmented_cgan_data.csv'
         else:
             print('\n ~~~~~~~~~~~ Train on Augmented CGAN and Test on Augmented GAN Data ~~~~~~~~~~~~~\n')
             synthetic_test_data = pickle.load(
-                open('../data/synthetic_data/gan/synthetic_binary_test_data', 'rb'))
+                open('../data/synthetic_data/simple_gan/synthetic_binary_test_data', 'rb'))
     else:
         synthetic_data = pickle.load(
-            open('../data/synthetic_data/gan/synthetic_binary_train_data', 'rb'))
+            open('../data/synthetic_data/simple_gan/synthetic_binary_train_data', 'rb'))
         if test_cgan:
             print('\n ~~~~~~~~~~~ Train on Augmented GAN and Test on Augmented CGAN Data ~~~~~~~~~~~~~\n')
             synthetic_test_data = pickle.load(
                 open('../data/synthetic_data/conditional_gan/synthetic_binary_test_data', 'rb'))
+            filename = 'train_gan_and_test_on_augmented_cgan_data.csv'
         else:
             print('\n ~~~~~~~~~~~ Train on Augmented GAN and Test on Augmented GAN Data ~~~~~~~~~~~~~\n')
             synthetic_test_data = pickle.load(
-                open('../data/synthetic_data/gan/synthetic_binary_test_data', 'rb'))
+                open('../data/synthetic_data/simple_gan/synthetic_binary_test_data', 'rb'))
 
     train_original_data = pickle.load(open('../data/original_data/train_binary_data', 'rb'))
     synthetic_data_train = synthetic_data.sample(frac=1)
@@ -251,14 +306,17 @@ def train_and_test_on_augmented_data(train_cgan=False, test_cgan=False):
     y_test = y_test.astype('int')
 
     print('\n~~~~~~~~ Running Classifiers ~~~~~~~~~~~~~~~')
-    run_classifiers(X_train, X_test, y_train, y_test)
+    acc, prec, f1, rec, g_m = run_classifiers(X_train, X_test, y_train, y_test)
+
+    df = results_to_df(acc, prec, f1, rec, g_m)
+    df.to_csv(filename)
 
 
 print('------- Binary Bot Detection --------')
 # Train on Augmented Data
-# train_and_test_on_augmented_data(cgan=True)
-# train_on_augmented_and_test_on_original_data(cgan=True)
+train_and_test_on_augmented_data(train_cgan=True, test_cgan=True)
+#train_on_augmented_and_test_on_original_data(cgan=True)
 
 # Train on Original Data
 # train_and_test_on_original_data()
-train_on_original_and_test_on_augmented_data(cgan=False)
+# train_on_original_and_test_on_augmented_data(cgan=True)

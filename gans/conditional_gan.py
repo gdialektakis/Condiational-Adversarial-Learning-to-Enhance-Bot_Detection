@@ -36,16 +36,17 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.num_classes = 2
         self.num_features = 310
+        self.prob = 0.2
         # embedding layer of the class labels (num_of_classes * encoding_size of each word)
         self.label_emb = nn.Embedding(self.num_classes, self.num_classes)
 
         self.model = nn.Sequential(
             nn.Linear(self.num_features+self.num_classes, 400),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Dropout(0.2),
+            nn.Dropout(self.prob),
             nn.Linear(400, 1000),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Dropout(0.2),
+            nn.Dropout(self.prob),
             nn.Linear(1000, 1),
             nn.Sigmoid()
         )

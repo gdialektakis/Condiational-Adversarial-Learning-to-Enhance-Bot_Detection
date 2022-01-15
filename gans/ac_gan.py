@@ -4,7 +4,6 @@ The code is developed using the PyTorch library
 """
 
 import pickle
-import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -38,23 +37,27 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.num_classes = 6
         self.num_features = 310
+        self.prob = 0.5
 
         self.model = nn.Sequential(
             nn.Linear(self.num_features, 400),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Dropout(0.2),
+            nn.Dropout(self.prob),
             nn.Linear(400, 1000),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Dropout(0.2)
+            nn.Dropout(self.prob),
+            nn.Linear(1000, 2000),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(self.prob)
         )
 
         self.discriminator = nn.Sequential(
-            nn.Linear(1000, 1),
+            nn.Linear(2000, 1),
             nn.Sigmoid()
         )
 
         self.aux_classifier = nn.Sequential(
-            nn.Linear(1000, self.num_classes),
+            nn.Linear(2000, self.num_classes),
             nn.Softmax()
         )
 
@@ -150,12 +153,14 @@ def train_gan(epochs=100):
     mean_D_loss = []
     mean_G_loss = []
     mean_D_acc = []
-    mean_acc = []
+    mean_Gmean = []
     for epoch in range(epochs):
         epoch_D_loss = []
         epoch_G_loss = []
         epoch_D_acc = []
         epoch_acc = []
+        epoch_Gmean = []
+        epoch_precision = []
         # labels = train_loader[1]
         for idx, train_data in enumerate(train_loader):
             idx += 1
@@ -181,7 +186,7 @@ def train_gan(epochs=100):
 
             # Generator Loss
             G_loss = 0.5 * (
-                        adversarial_loss(fake_outputs, fake_targets) + auxiliary_loss(pred_label, fake_class_labels))
+                    adversarial_loss(fake_outputs, fake_targets) + auxiliary_loss(pred_label, fake_class_labels))
 
             G_optimizer.zero_grad()
             G_loss.backward()
@@ -237,7 +242,8 @@ def train_gan(epochs=100):
             # print("Recall-score {:.5f}".format(metrics.recall_score(ground_truth, D_predictions, average='macro')))
             # print("G-Mean {:.5f}".format(geometric_mean_score(ground_truth, D_predictions, correction=0.0001)))
             # print("==============================\n")
-
+            Gmean = geometric_mean_score(ground_truth, D_predictions, correction=0.0001)
+            precision = metrics.precision_score(ground_truth, D_predictions, average='macro')
             D_optimizer.zero_grad()
             D_loss.backward()
             D_optimizer.step()
@@ -246,19 +252,25 @@ def train_gan(epochs=100):
                 epoch_D_loss.append(D_loss.item())
                 epoch_G_loss.append(G_loss.item())
                 epoch_D_acc.append(D_accuracy)
+                epoch_Gmean.append(Gmean)
                 epoch_acc.append(acc)
+                epoch_precision.append(precision)
 
         print(
             "[Epoch %d/%d] [D loss: %f, acc: %d%%] [G loss: %f]"
-            % (epoch, epochs, mean(epoch_D_loss), 100 * mean(epoch_D_acc), mean(epoch_G_loss))
-        )
+            % (epoch, epochs, mean(epoch_D_loss), 100 * mean(epoch_D_acc), mean(epoch_G_loss)))
+        print("~~~~~~~~~~~~~~ Discriminator Performance on Mixed Data ~~~~~~~~~~~~~~~~")
+        print("G-Mean {:.5f}".format(mean(epoch_Gmean)))
+        print("Precision {:.5f}".format(mean(epoch_precision)))
+        print("==============================\n")
+
         # print('Epoch {} -- Discriminator mean Accuracy: {:.5f}'.format(epoch, mean(epoch_D_acc)))
         # print('Epoch {} -- Discriminator mean loss: {:.5f}'.format(epoch, mean(epoch_D_loss)))
         # print('Epoch {} -- Generator mean loss: {:.5f}'.format(epoch, mean(epoch_G_loss)))
-        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         mean_D_loss.append(mean(epoch_D_loss))
         mean_G_loss.append(mean(epoch_G_loss))
         mean_D_acc.append(mean(epoch_D_acc))
+        mean_Gmean.append(mean(epoch_Gmean))
 
     # loss plots
     plt.figure(figsize=(10, 7))
@@ -273,6 +285,7 @@ def train_gan(epochs=100):
 
     plt.figure(figsize=(10, 7))
     plt.plot(mean_D_acc, color='blue', label='Discriminator accuracy')
+    plt.plot(mean_Gmean, color='red', label='Discriminator G-Mean')
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
@@ -297,6 +310,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, label=0)
     _, real_data, _ = prepare_data()
 
     generator = torch.load('ac_gan/AC_GAN_Generator_save.pth')
+    generator.eval()
     # Generate points in the latent space
     noise = (torch.rand(num_of_samples, 128) - 0.5) / 0.5
     noise = noise.to(device)
@@ -346,8 +360,7 @@ def generate_30K_samples_per_class():
     # Shuffle the dataframe
     final_df = final_df.sample(frac=1)
 
-    pickle.dump(final_df,
-                open('../data/synthetic_data/ac_gan/synthetic_data_30000_per_class', 'wb'))
+    pickle.dump(final_df, open('../data/synthetic_data/ac_gan/synthetic_data_30K_per_class', 'wb'))
     return final_df
 
 
@@ -382,8 +395,51 @@ def generate_samples_to_reach_30K_per_class():
     return final_df
 
 
-def evaluate_synthetic_data(synthetic_data):
+def generate_test_synthetic_data(balanced=False):
+    if balanced:
+        ## For each class, generate 2200 samples for testing
+        synthetic_data0, _ = generate_synthetic_samples(num_of_samples=2200, label=0)
+        synthetic_data1, _ = generate_synthetic_samples(num_of_samples=2200, label=1)
+        synthetic_data2, _ = generate_synthetic_samples(num_of_samples=2200, label=2)
+        synthetic_data3, _ = generate_synthetic_samples(num_of_samples=2200, label=3)
+        synthetic_data4, _ = generate_synthetic_samples(num_of_samples=2200, label=4)
+        synthetic_data5, _ = generate_synthetic_samples(num_of_samples=2200, label=5)
+        filename = 'synthetic_test_data_balanced'
+    else:
+
+        """
+        Original Test Data Label Distribution:
+        0    6032
+        3    3431
+        1    2306
+        5    1177
+        4     239
+        2     88
+        """
+        ## For each class, generate that many samples to reach 30000 samples
+        synthetic_data0, _ = generate_synthetic_samples(num_of_samples=6032, label=0)
+        synthetic_data1, _ = generate_synthetic_samples(num_of_samples=2306, label=1)
+        synthetic_data2, _ = generate_synthetic_samples(num_of_samples=88, label=2)
+        synthetic_data3, _ = generate_synthetic_samples(num_of_samples=3431, label=3)
+        synthetic_data4, _ = generate_synthetic_samples(num_of_samples=239, label=4)
+        synthetic_data5, _ = generate_synthetic_samples(num_of_samples=1177, label=5)
+
+        filename = 'synthetic_test_data'
+
+    # List of above dataframes
+    pdList = [synthetic_data0, synthetic_data1, synthetic_data2, synthetic_data3, synthetic_data4, synthetic_data5]
+    final_df = pd.concat(pdList)
+
+    # Shuffle the dataframe
+    final_df = final_df.sample(frac=1)
+
+    pickle.dump(final_df, open('../data/synthetic_data/ac_gan/' + filename, 'wb'))
+    return final_df
+
+
+def evaluate_synthetic_data():
     real_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
+    synthetic_data = pickle.load(open('../data/synthetic_data/ac_gan/synthetic_data_30K_per_class', 'rb'))
 
     print('\n~~~~~~~~~~~~~~ Synthetic Data Evaluation ~~~~~~~~~~~~~~')
 
@@ -393,33 +449,70 @@ def evaluate_synthetic_data(synthetic_data):
     # kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
     # print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
-    real_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
-    print('\n----------- Comparing synthetic to test real data ----------- ')
-    ks = KSTest.compute(synthetic_data, real_data)
-    print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
-    # kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-    # print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
-
-def predict_bot_class():
+def predict_bot_class(synthetic_data):
+    scaler = joblib.load("ac_gan/scaler.save")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     """
     Use trained Discriminator to predict the bot type of unseen original
     and synthetic data and evaluate its performance.
     """
 
+    ############################  Classify only Original Data  ############################
     test_original_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
     # Get the label from our data
     ground_truth = test_original_data['label']
 
-    test_original_data = test_original_data.drop('label', axis=1)
+    test_orig_data = test_original_data.drop('label', axis=1)
+    test_orig_data = scaler.transform(test_orig_data)
+    test_orig_data = torch.tensor(test_orig_data, dtype=torch.float32).to(device)
 
     discriminator = torch.load('ac_gan/AC_GAN_Discriminator_save.pth')
-
-    _, predictions = discriminator(test_original_data)
-
+    discriminator.eval()
+    _, predictions = discriminator(test_orig_data)
+    predictions = predictions.cpu().detach().numpy()
     D_predictions = np.argmax(predictions, axis=1)
 
-    print("~~~~~~~~~~~~~~ Discriminator Performance ~~~~~~~~~~~~~~~~")
+    print("~~~~~~~~~~~~~~ Discriminator Performance on Original Data ~~~~~~~~~~~~~~~~")
+    print("Accuracy {:.5f}".format(metrics.accuracy_score(ground_truth, D_predictions)))
+    print("Precision {:.5f}".format(metrics.precision_score(ground_truth, D_predictions, average='macro')))
+    print("F1-score {:.5f}".format(metrics.f1_score(ground_truth, D_predictions, average='macro')))
+    print("Recall-score {:.5f}".format(metrics.recall_score(ground_truth, D_predictions, average='macro')))
+    print("G-Mean {:.5f}".format(geometric_mean_score(ground_truth, D_predictions, correction=0.0001)))
+    print("==============================\n")
+
+    ############################  Classify only Synthetic Data  ############################
+    synthetic_data = synthetic_data.sample(n=len(test_original_data.index))
+    ground_truth = synthetic_data['label']
+    synth_data = synthetic_data.drop('label', axis=1)
+    synth_data = scaler.transform(synth_data)
+    synth_data = torch.tensor(synth_data, dtype=torch.float32).to(device)
+
+    _, predictions = discriminator(synth_data)
+    D_predictions = np.argmax(predictions.cpu().detach().numpy(), axis=1)
+
+    print("~~~~~~~~~~~~~~ Discriminator Performance on Synthetic Data ~~~~~~~~~~~~~~~~")
+    print("Accuracy {:.5f}".format(metrics.accuracy_score(ground_truth, D_predictions)))
+    print("Precision {:.5f}".format(metrics.precision_score(ground_truth, D_predictions, average='macro')))
+    print("F1-score {:.5f}".format(metrics.f1_score(ground_truth, D_predictions, average='macro')))
+    print("Recall-score {:.5f}".format(metrics.recall_score(ground_truth, D_predictions, average='macro')))
+    print("G-Mean {:.5f}".format(geometric_mean_score(ground_truth, D_predictions, correction=0.0001)))
+    print("==============================\n")
+
+    ############################  Classify on Mixed Data  ############################
+
+    mixed_data = test_original_data.append(synthetic_data)
+    mixed_data = mixed_data.sample(frac=1)
+
+    ground_truth = mixed_data['label']
+    mixed_data = mixed_data.drop('label', axis=1)
+    mixed_data = scaler.transform(mixed_data)
+    mixed_data = torch.tensor(mixed_data, dtype=torch.float32).to(device)
+
+    _, predictions = discriminator(mixed_data)
+    D_predictions = np.argmax(predictions.cpu().detach().numpy(), axis=1)
+
+    print("~~~~~~~~~~~~~~ Discriminator Performance on Mixed Data ~~~~~~~~~~~~~~~~")
     print("Accuracy {:.5f}".format(metrics.accuracy_score(ground_truth, D_predictions)))
     print("Precision {:.5f}".format(metrics.precision_score(ground_truth, D_predictions, average='macro')))
     print("F1-score {:.5f}".format(metrics.f1_score(ground_truth, D_predictions, average='macro')))
@@ -428,12 +521,33 @@ def predict_bot_class():
     print("==============================\n")
 
 
-# train_gan(epochs=300)
+def ac_gan_classification(test_ac_gan=True):
+    if test_ac_gan:
+        print('------- Classification on AC-GAN test data -------')
+        synthetic_test_data = pickle.load(open('../data/synthetic_data/ac_gan/synthetic_test_data', 'rb'))
+        test_filename = 'ac_gan'
+    else:
+        print('------- Classification on Conditional GAN test data -------')
+        synthetic_test_data = pickle.load(
+            open('../data/synthetic_data/conditional_gan_multiclass/synthetic_test_data', 'rb'))
+        test_filename = 'cgan'
+
+    predict_bot_class(synthetic_test_data)
+
+
+train_gan(epochs=300)
+
+generate_30K_samples_per_class()
+generate_test_synthetic_data(balanced=False)
+# predict_bot_class(synthetic_data=pickle.load(open('../data/synthetic_data/ac_gan'
+# '/synthetic_data_30K_per_class', 'rb')))
 
 print('\n~~~~~~~~~~~~~~ Evaluating method of creating 30K new samples for each class ~~~~~~~~~~~~~~')
-evaluate_synthetic_data(synthetic_data=generate_30K_samples_per_class())
+evaluate_synthetic_data()
 
 """
 print('\n~~~~~~~~~~~~~~ Evaluating method of creating a balanced dataset ~~~~~~~~~~~~~~')
 evaluate_synthetic_data(synthetic_data=generate_samples_to_reach_30K_per_class())
 """
+
+ac_gan_classification(test_ac_gan=True)
