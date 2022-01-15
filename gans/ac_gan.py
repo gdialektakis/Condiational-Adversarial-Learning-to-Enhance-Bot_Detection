@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from sdv.evaluation import evaluate
 from sdv.metrics.tabular import KSTest
 from statistics import mean
-import helper_scripts.transform_booleans as transform_bool
+import helper_functions.transform_booleans as transform_bool
 import warnings
 from sklearn import metrics
 from imblearn.metrics import geometric_mean_score

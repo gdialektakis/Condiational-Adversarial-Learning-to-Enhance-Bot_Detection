@@ -1,10 +1,10 @@
-import helper_scripts.feature_taxonomy as ft
+import helper_functions.feature_taxonomy as ft
 import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
-from helper_scripts.dimensionality_reduction import dimensionality_reduction
+from helper_functions.dimensionality_reduction import dimensionality_reduction
 import pickle
 
 pd.options.mode.chained_assignment = None

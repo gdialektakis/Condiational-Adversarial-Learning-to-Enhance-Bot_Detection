@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from sdv.evaluation import evaluate
 from sdv.metrics.tabular import KSTest
 from statistics import mean
-import helper_scripts.transform_booleans as transform_bool
+import helper_functions.transform_booleans as transform_bool
 import warnings
 
 warnings.filterwarnings('ignore')

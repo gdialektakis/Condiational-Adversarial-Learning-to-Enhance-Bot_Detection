@@ -22,7 +22,7 @@ from statistics import mean
 from sklearn.model_selection import train_test_split
 from sdv.metrics.tabular import BNLikelihood, BNLogLikelihood, GMLogLikelihood
 from sdv.metrics.tabular import LogisticDetection, SVCDetection
-import helper_scripts.transform_booleans as transform_bool
+import helper_functions.transform_booleans as transform_bool
 import warnings
 import seaborn as sns
 
