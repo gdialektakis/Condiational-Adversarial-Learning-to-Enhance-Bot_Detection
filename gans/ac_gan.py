@@ -251,7 +251,7 @@ def train_gan(epochs=100):
             if idx % 100 == 0 or idx == len(train_loader):
                 epoch_D_loss.append(D_loss.item())
                 epoch_G_loss.append(G_loss.item())
-                epoch_D_acc.append(D_accuracy)
+                epoch_D_acc.append(D_accuracy.item())
                 epoch_Gmean.append(Gmean)
                 epoch_acc.append(acc)
                 epoch_precision.append(precision)
@@ -344,26 +344,6 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, label=0)
     return synthetic_data, real_data
 
 
-def generate_30K_samples_per_class():
-    ## For each class, generate 30000 synthetic samples
-    synthetic_data0, _ = generate_synthetic_samples(num_of_samples=30000, label=0)
-    synthetic_data1, _ = generate_synthetic_samples(num_of_samples=30000, label=1)
-    synthetic_data2, _ = generate_synthetic_samples(num_of_samples=30000, label=2)
-    synthetic_data3, _ = generate_synthetic_samples(num_of_samples=30000, label=3)
-    synthetic_data4, _ = generate_synthetic_samples(num_of_samples=30000, label=4)
-    synthetic_data5, _ = generate_synthetic_samples(num_of_samples=30000, label=5)
-
-    # List of above dataframes
-    pdList = [synthetic_data0, synthetic_data1, synthetic_data2, synthetic_data3, synthetic_data4, synthetic_data5]
-    final_df = pd.concat(pdList)
-
-    # Shuffle the dataframe
-    final_df = final_df.sample(frac=1)
-
-    pickle.dump(final_df, open('../data/synthetic_data/ac_gan/synthetic_data_30K_per_class', 'wb'))
-    return final_df
-
-
 def generate_samples_to_reach_30K_per_class():
     ## For each class, generate that many synthetic samples to reach 30000 so that we have a balanced dataset.
     """
@@ -391,7 +371,37 @@ def generate_samples_to_reach_30K_per_class():
     final_df = final_df.sample(frac=1)
 
     pickle.dump(final_df,
-                open('../data/synthetic_data/ac_gan/synthetic_data_balanced_per_class', 'wb'))
+                open('../data/synthetic_data/ac_gan/synthetic_data_30K_per_class', 'wb'))
+    return final_df
+
+
+def generate_2to1_synthetic_samples():
+    ## For each class, generate 2:1 synthetic samples, except humans.
+    """
+    Label Distribution:
+    0    24403
+    1     9333
+    2      408
+    3    13283
+    4      958
+    5     4703
+    """
+    ## For each class, generate that many samples to reach 30000 samples
+    synthetic_data1, _ = generate_synthetic_samples(num_of_samples=2*9333, label=1)
+    synthetic_data2, _ = generate_synthetic_samples(num_of_samples=2*408, label=2)
+    synthetic_data3, _ = generate_synthetic_samples(num_of_samples=2*13283, label=3)
+    synthetic_data4, _ = generate_synthetic_samples(num_of_samples=2*958, label=4)
+    synthetic_data5, _ = generate_synthetic_samples(num_of_samples=2*4703, label=5)
+
+    # List of above dataframes
+    pdList = [synthetic_data1, synthetic_data2, synthetic_data3, synthetic_data4, synthetic_data5]
+    final_df = pd.concat(pdList)
+
+    # Shuffle the dataframe
+    final_df = final_df.sample(frac=1)
+
+    pickle.dump(final_df,
+                open('../data/synthetic_data/ac_gan/synthetic_data_2_to_1', 'wb'))
     return final_df
 
 
@@ -439,15 +449,40 @@ def generate_test_synthetic_data(balanced=False):
 
 def evaluate_synthetic_data():
     real_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
-    synthetic_data = pickle.load(open('../data/synthetic_data/ac_gan/synthetic_data_30K_per_class', 'rb'))
+    real_data = real_data.drop(['label'], axis=1)
+
+    test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
+    test_data = test_data.drop(['label'], axis=1)
 
     print('\n~~~~~~~~~~~~~~ Synthetic Data Evaluation ~~~~~~~~~~~~~~')
 
-    print('\n----------- Comparing synthetic to train real data ----------- ')
+    print('\n~~~~~~~~~~~~~~ Evaluating method of creating that many samples to reach 30K per class ~~~~~~~~~~~~~~')
+    synthetic_data = pickle.load(
+        open('../data/synthetic_data/ac_gan/synthetic_data_30K_per_class', 'rb'))
+
+    synthetic_data = synthetic_data.drop(['label'], axis=1)
+
     ks = KSTest.compute(synthetic_data, real_data)
-    print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
-    # kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-    # print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+    ks_test_data = KSTest.compute(synthetic_data, test_data)
+    print('Inverted Kolmogorov-Smirnov D statistic on Train Data: {}'.format(ks))
+    print('Inverted Kolmogorov-Smirnov D statistic on Test Data: {}'.format(ks_test_data))
+
+    #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+
+    print('\n~~~~~~~~~~~~~~ Evaluating method of creating two to one synthetic samples  per class ~~~~~~~~~~~~~~')
+    synthetic_data = pickle.load(
+        open('../data/synthetic_data/ac_gan/synthetic_data_2_to_1', 'rb'))
+
+    synthetic_data = synthetic_data.drop(['label'], axis=1)
+
+    ks = KSTest.compute(synthetic_data, real_data)
+    ks_test_data = KSTest.compute(synthetic_data, test_data)
+    print('Inverted Kolmogorov-Smirnov D statistic on Train Data: {}'.format(ks))
+    print('Inverted Kolmogorov-Smirnov D statistic on Test Data: {}'.format(ks_test_data))
+
+    #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
 
 def predict_bot_class(synthetic_data):
@@ -535,19 +570,17 @@ def ac_gan_classification(test_ac_gan=True):
     predict_bot_class(synthetic_test_data)
 
 
-train_gan(epochs=300)
+#train_gan(epochs=300)
 
-generate_30K_samples_per_class()
-generate_test_synthetic_data(balanced=False)
+#generate_samples_to_reach_30K_per_class()
+#generate_2to1_synthetic_samples()
+#generate_test_synthetic_data(balanced=False)
+
+#print('\n~~~~~~~~~~~~~~ Evaluating method of creating 30K new samples for each class ~~~~~~~~~~~~~~')
+#evaluate_synthetic_data()
+
 # predict_bot_class(synthetic_data=pickle.load(open('../data/synthetic_data/ac_gan'
 # '/synthetic_data_30K_per_class', 'rb')))
 
-print('\n~~~~~~~~~~~~~~ Evaluating method of creating 30K new samples for each class ~~~~~~~~~~~~~~')
-evaluate_synthetic_data()
-
-"""
-print('\n~~~~~~~~~~~~~~ Evaluating method of creating a balanced dataset ~~~~~~~~~~~~~~')
-evaluate_synthetic_data(synthetic_data=generate_samples_to_reach_30K_per_class())
-"""
-
-ac_gan_classification(test_ac_gan=True)
+generate_test_synthetic_data(balanced=False)
+ac_gan_classification(test_ac_gan=False)

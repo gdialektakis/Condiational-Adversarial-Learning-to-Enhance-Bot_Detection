@@ -7,6 +7,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.model_selection import train_test_split
+from torch import FloatTensor, LongTensor
+from torch.autograd import Variable
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import pandas as pd
@@ -23,6 +25,8 @@ import warnings
 warnings.filterwarnings('ignore')
 
 """
+Conditional GAN that uses Wasserstein distance for loss function
+
 Network Architectures
 The following are the discriminator and generator architectures
 """
@@ -44,8 +48,7 @@ class Discriminator(nn.Module):
             nn.Linear(400, 1000),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(self.prob),
-            nn.Linear(1000, 1),
-            nn.Sigmoid()
+            nn.Linear(1000, 1)
         )
 
     def forward(self, x, labels):
@@ -96,7 +99,7 @@ def prepare_data(df=pickle.load(open('../data/original_data/train_multiclass_dat
     df_scaled = scaler.fit_transform(X=df)
 
     # Store scaler for later use
-    scaler_filename = "conditional_gan_multi/scaler.save"
+    scaler_filename = "w_conditional_gan_multi/scaler.save"
     joblib.dump(scaler, scaler_filename)
 
     # Transform dataframe into pytorch Tensor
@@ -105,11 +108,11 @@ def prepare_data(df=pickle.load(open('../data/original_data/train_multiclass_dat
     return train_loader, df, pd.DataFrame(df_scaled)
 
 
-def train_gan(epochs=100):
+def train_gan(n_epochs=100):
     """
     Determine if any GPUs are available
     """
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    cuda = True if torch.cuda.is_available() else False
 
     """
     Hyperparameter settings
@@ -117,29 +120,43 @@ def train_gan(epochs=100):
     G_lr = 0.0002
     D_lr = 0.0002
     bs = 512
-    loss = nn.BCELoss()
+
+    # Loss functions
+    adversarial_loss = torch.nn.MSELoss()
     num_of_classes = 6
 
     # Model
-    G = Generator().to(device)
-    D = Discriminator().to(device)
+    G = Generator()
+    D = Discriminator()
 
-    G_optimizer = optim.Adam(G.parameters(), lr=G_lr, betas=(0.5, 0.999))
-    D_optimizer = optim.Adam(D.parameters(), lr=D_lr, betas=(0.5, 0.999))
+    if cuda:
+        G.cuda()
+        D.cuda()
+        adversarial_loss.cuda()
+
+    optimizer_G = torch.optim.RMSprop(G.parameters(), lr=G_lr)
+    optimizer_D = optim.RMSprop(D.parameters(), lr=D_lr)
+
+    #optimizer_G = optim.Adam(G.parameters(), lr=G_lr, betas=(0.5, 0.999))
+    #optimizer_D = optim.Adam(D.parameters(), lr=D_lr, betas=(0.5, 0.999))
 
     # Load our data
     train_loader, _, _ = prepare_data(batch_size=bs)
 
+    FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+    LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
+
+    Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+
     """
     Network training procedure
-    Every step both the loss for disciminator and generator is updated
     Discriminator aims to classify reals and fakes
     Generator aims to generate bot accounts as realistic as possible
     """
     mean_D_loss = []
     mean_G_loss = []
     D_acc = []
-    for epoch in range(epochs):
+    for epoch in range(n_epochs):
         acc = []
         epoch_D_loss = []
         epoch_G_loss = []
@@ -147,92 +164,111 @@ def train_gan(epochs=100):
         for idx, train_data in enumerate(train_loader):
             idx += 1
 
-            # Training the discriminator
-            # Real inputs are actual samples from the original dataset
-            # Fake inputs are from the generator
-            # Real inputs should be classified as 1 and fake as 0
+            # Adversarial ground truths
+            valid = Variable(FloatTensor(bs, 1).fill_(1.0), requires_grad=False).cuda()
+            fake = Variable(FloatTensor(bs, 1).fill_(0.0), requires_grad=False).cuda()
 
-            # Fetch a batch of real samples from training data
-            # Feed real samples to Discriminator
-            real_inputs = train_data[0].to(device)
-            class_labels = train_data[1].to(torch.int64).to(device)
-            real_outputs = D(real_inputs, class_labels)
-            real_labels = torch.ones(real_inputs.shape[0], 1).to(device)
+            # Configure input
+            real_inputs = Variable(train_data[0].type(FloatTensor))
+            labels = Variable(train_data[1].type(LongTensor))
 
-            # Make a batch of fake samples using Generator
-            # Feed fake samples to Discriminator
-            noise = (torch.rand(real_inputs.shape[0], 128) - 0.5) / 0.5
-            noise = noise.to(device)
+            # ---------------------
+            #  Train Discriminator
+            # ---------------------
 
-            fake_class_labels = torch.randint(0, num_of_classes, (real_inputs.shape[0],)).to(device)
-            fake_inputs = G(noise, fake_class_labels)
+            optimizer_D.zero_grad()
 
-            fake_outputs = D(fake_inputs, fake_class_labels)
-            fake_labels = torch.zeros(fake_inputs.shape[0], 1).to(device)
+            # Sample noise as generator input
+            latent_dim = 128
+            z = Variable(FloatTensor(np.random.normal(0, 1, (bs, latent_dim)))).cuda()
+            gen_labels = Variable(LongTensor(np.random.randint(0, num_of_classes, bs)))
 
-            # Combine the two loss values
-            # use combined loss to update Discriminator
-            outputs = torch.cat((real_outputs, fake_outputs), 0).view(-1, 1)
-            targets = torch.cat((real_labels, fake_labels), 0)
+            # Generate a batch of bot samples
+            gen_bots = G(z, gen_labels)
 
-            # Just for evaluation and monitoring purposes
-            predictions = outputs.cpu().detach().numpy()
-            predictions = np.round(predictions)
-            labels = targets.cpu().detach().numpy()
+            # Adversarial loss
 
-            D_loss = loss(outputs, targets)
-            D_optimizer.zero_grad()
-            D_loss.backward()
-            D_optimizer.step()
+            # Loss for real bots
+            #validity_real = D(real_inputs, labels)
+            #d_real_loss = adversarial_loss(validity_real, valid)
 
-            # Training the Generator
-            # For the Generator, the goal is to make the Discriminator believe everything is 1
-            noise = (torch.rand(real_inputs.shape[0], 128) - 0.5) / 0.5
-            noise = noise.to(device)
+            # Loss for fake images
+            #validity_fake = D(gen_bots.detach(), gen_labels)
+            #d_fake_loss = adversarial_loss(validity_fake, fake)
+            loss_D = -torch.mean(D(real_inputs, labels)) + torch.mean(D(gen_bots.detach(), gen_labels))
 
-            # Make a batch of fake samples using Generator
-            # Feed fake samples to Discriminator, compute reverse loss and use it to update the Generator
-            fake_inputs = G(noise, fake_class_labels)
-            fake_outputs = D(fake_inputs, fake_class_labels).view(-1, 1)
-            fake_targets = torch.ones([fake_inputs.shape[0], 1]).to(device)
-            G_loss = loss(fake_outputs, fake_targets)
-            G_optimizer.zero_grad()
-            G_loss.backward()
-            G_optimizer.step()
+            loss_D.backward()
+            optimizer_D.step()
 
-            if idx % 100 == 0 or idx == len(train_loader):
-                epoch_D_loss.append(D_loss.item())
-                epoch_G_loss.append(G_loss.item())
-                D_accuracy = accuracy_score(labels, predictions)
-                acc.append(D_accuracy)
+            # Clip weights of discriminator
+            clip_value = 0.02
 
-        print('Epoch {} -- Discriminator mean Accuracy: {:.5f}'.format(epoch, mean(acc)))
+            for p in D.parameters():
+                p.data.clamp_(-clip_value, clip_value)
+
+            # -----------------
+            #  Train Generator
+            # -----------------
+            # Train the generator every n_critic iterations
+            n_critic = 5
+            if idx % n_critic == 0:
+
+                optimizer_G.zero_grad()
+
+                gen_labels = Variable(LongTensor(np.random.randint(0, num_of_classes, bs)))
+
+                # Generate a batch of bot samples
+                gen_bots = G(z, gen_labels)
+
+                # Adversarial loss
+                loss_G = -torch.mean(D(gen_bots, gen_labels))
+
+                loss_G.backward()
+                optimizer_G.step()
+
+                """
+                print(
+                    "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
+                    % (epoch, n_epochs, idx, len(train_loader), loss_D.item(), loss_G.item())
+                )
+                """
+                if idx % 100 == 0 or idx == len(train_loader):
+                    epoch_D_loss.append(loss_D.item())
+                    epoch_G_loss.append(loss_G.item())
+                    #D_accuracy = accuracy_score(labels, predictions)
+                    #acc.append(D_accuracy)
+
+        #print('Epoch {} -- Discriminator mean Accuracy: {:.5f}'.format(epoch, mean(acc)))
         print('Epoch {} -- Discriminator mean loss: {:.5f}'.format(epoch, mean(epoch_D_loss)))
         print('Epoch {} -- Generator mean loss: {:.5f}'.format(epoch, mean(epoch_G_loss)))
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         mean_D_loss.append(mean(epoch_D_loss))
         mean_G_loss.append(mean(epoch_G_loss))
-        D_acc.append(mean(acc))
+        #D_acc.append(mean(acc))
 
     # loss plots
     plt.figure(figsize=(10, 7))
+    plt.ylim(-3, 3)
     plt.plot(mean_D_loss, color='blue', label='Discriminator loss')
     plt.plot(mean_G_loss, color='red', label='Generator loss')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig('conditional_gan_multi/cond_gan_loss.png')
+    plt.savefig('w_conditional_gan_multi/cond_gan_loss.png')
     plt.show()
 
+    """
     plt.figure(figsize=(10, 7))
     plt.plot(D_acc, color='blue', label='Discriminator accuracy')
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.savefig('conditional_gan_multi/cond_discriminator_acc.png')
+    plt.savefig('w_conditional_gan_multi/cond_discriminator_acc.png')
     plt.show()
+    
+    """
 
-    torch.save(G, 'conditional_gan_multi/Conditional_Generator_save.pth')
+    torch.save(G, 'w_conditional_gan_multi/Conditional_Generator_save.pth')
     print('Generator saved.')
 
 
@@ -247,7 +283,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, label=0)
     # Load initial data
     _, real_data, _ = prepare_data()
 
-    generator = torch.load('conditional_gan_multi/Conditional_Generator_save.pth')
+    generator = torch.load('w_conditional_gan_multi/Conditional_Generator_save.pth')
     # Generate points in the latent space
     noise = (torch.rand(num_of_samples, 128) - 0.5) / 0.5
     noise = noise.to(device)
@@ -265,7 +301,7 @@ def generate_synthetic_samples(num_of_samples=100, num_of_features=310, label=0)
     class_labels = class_labels.reshape(num_of_samples, 1)
 
     # Load saved min_max_scaler for inverse scaling transformation of the generated data
-    scaler = joblib.load("conditional_gan/scaler.save")
+    scaler = joblib.load("w_conditional_gan_multi/scaler.save")
     synthetic_data = scaler.inverse_transform(synthetic_samples)
     synthetic_data = pd.DataFrame(data=synthetic_data, columns=real_data.columns)
 
@@ -307,7 +343,7 @@ def generate_samples_to_reach_30K_per_class():
     final_df = final_df.sample(frac=1)
 
     pickle.dump(final_df,
-                open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30K_per_class_norm', 'wb'))
+                open('../data/synthetic_data/w_conditional_gan_multi/synthetic_data_30K_per_class', 'wb'))
     return final_df
 
 
@@ -337,7 +373,7 @@ def generate_2to1_synthetic_samples():
     final_df = final_df.sample(frac=1)
 
     pickle.dump(final_df,
-                open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'wb'))
+                open('../data/synthetic_data/w_conditional_gan_multi/synthetic_data_2_to_1', 'wb'))
     return final_df
 
 
@@ -379,28 +415,22 @@ def generate_test_synthetic_data(two_to_one=False):
     # Shuffle the dataframe
     final_df = final_df.sample(frac=1)
 
-    pickle.dump(final_df, open('../data/synthetic_data/conditional_gan_multiclass/' + filename, 'wb'))
+    pickle.dump(final_df, open('../data/synthetic_data/w_conditional_gan_multi/' + filename, 'wb'))
     return final_df
 
 
 def evaluate_synthetic_data():
     real_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
-    scaler = joblib.load("conditional_gan/scaler.save")
     real_data = real_data.drop(['label'], axis=1)
-    column_names = real_data.columns
-    real_data = scaler.transform(real_data)
+
     test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
     test_data = test_data.drop(['label'], axis=1)
-    test_data = scaler.transform(test_data)
-
-    real_data = pd.DataFrame(data=real_data, columns=column_names)
-    test_data = pd.DataFrame(data=test_data, columns=column_names)
 
     print('\n~~~~~~~~~~~~~~ Synthetic Data Evaluation ~~~~~~~~~~~~~~')
 
-    print('\n~~~~~~~~~~~~~~ Evaluating method of creating that many samples to reach 100K per class ~~~~~~~~~~~~~~')
+    print('\n~~~~~~~~~~~~~~ Evaluating method of creating that many samples to reach 30K per class ~~~~~~~~~~~~~~')
     synthetic_data = pickle.load(
-        open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30K_per_class_norm', 'rb'))
+        open('../data/synthetic_data/w_conditional_gan_multi/synthetic_data_30K_per_class', 'rb'))
 
     synthetic_data = synthetic_data.drop(['label'], axis=1)
 
@@ -414,7 +444,7 @@ def evaluate_synthetic_data():
 
     print('\n~~~~~~~~~~~~~~ Evaluating method of creating two to one synthetic samples  per class ~~~~~~~~~~~~~~')
     synthetic_data = pickle.load(
-        open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'rb'))
+        open('../data/synthetic_data/w_conditional_gan_multi/synthetic_data_2_to_1', 'rb'))
 
     synthetic_data = synthetic_data.drop(['label'], axis=1)
 
@@ -427,11 +457,10 @@ def evaluate_synthetic_data():
     #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
 
-#train_gan(epochs=300)
+train_gan(n_epochs=800)
 
 generate_samples_to_reach_30K_per_class()
-#generate_2to1_synthetic_samples()
-
+generate_2to1_synthetic_samples()
 evaluate_synthetic_data()
 
 #generate_test_synthetic_data(balanced=False)

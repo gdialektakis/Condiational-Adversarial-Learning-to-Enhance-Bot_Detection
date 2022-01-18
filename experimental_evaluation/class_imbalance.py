@@ -1,14 +1,13 @@
 import pickle
 import time
-
-from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.svm import LinearSVC
 from sklearn.ensemble import RandomForestClassifier
 from imblearn.over_sampling import ADASYN
 from yellowbrick.classifier import ROCAUC, PrecisionRecallCurve
 from imblearn.combine import SMOTEENN
 from classifiers import run_classifiers, results_to_df, evaluation_metrics
+from sklearn.metrics import classification_report
+from roc_curves import draw_plots
 import warnings
 
 warnings.filterwarnings("ignore", category=Warning)
@@ -28,6 +27,8 @@ def run_RF(X_train, X_test, y_train, y_test, print_ROC=False):
     # pickle.dump(classifier, open(filename, 'wb'))
 
     y_pred = classifier.predict(X_test)
+
+    print(classification_report(y_test, y_pred, digits=4))
 
     acc, prec, f1, rec, g_m = evaluation_metrics(classifier_name, y_test, y_pred)
 
@@ -116,7 +117,7 @@ def train_and_test_on_original_data(adasyn=False, smote=False, fraction=1.0, rf=
         df.to_csv('./class_imbalance/original/all_classifiers_train_on_original_' + frac + '.csv')
 
 
-def train_on_augmented_and_test_on_original_data(ac_gan=False, two_to_1=False, fraction=1.0, rf=False):
+def train_on_augmented_and_test_on_original_data(ac_gan=False, two_to_1=False, specific_classes=False, fraction=1.0, rf=False):
     print('\n ~~~~~~~~~~~~~~~ Train with Augmented Data and Test on Original ~~~~~~~~~~~~~~~~')
 
     original_train_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
@@ -141,7 +142,8 @@ def train_on_augmented_and_test_on_original_data(ac_gan=False, two_to_1=False, f
     else:
         if two_to_1:
             synthetic_data = pickle.load(
-                open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'rb'))
+                    open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'rb'))
+
         else:
             synthetic_data = pickle.load(
                 open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_30K_per_class', 'rb'))
@@ -194,5 +196,6 @@ def train_on_augmented_and_test_on_original_data(ac_gan=False, two_to_1=False, f
 
 
 # Test on Original Data
-train_and_test_on_original_data(adasyn=False, smote=False, fraction=0.25, rf=True)
-# train_on_augmented_and_test_on_original_data(ac_gan=False, two_to_1=False, fraction=0.25, rf=True)
+#train_and_test_on_original_data(adasyn=False, smote=False, fraction=1.0, rf=True)
+train_on_augmented_and_test_on_original_data(ac_gan=False, two_to_1=True, fraction=0.25, rf=True)
+#draw_plots(fraction=0.5)
