@@ -415,31 +415,27 @@ def evaluate_synthetic_data():
     synthetic_data = synthetic_data.drop(['label'], axis=1)
 
     ks = KSTest.compute(synthetic_data, real_data)
-    ks_test_data = KSTest.compute(synthetic_data, test_data)
     print('Inverted Kolmogorov-Smirnov D statistic on Train Data: {}'.format(ks))
-    print('Inverted Kolmogorov-Smirnov D statistic on Test Data: {}'.format(ks_test_data))
 
-    #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-    #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
-    print('\n~~~~~~~~~~~~~~ Evaluating method of creating two to one synthetic samples  per class ~~~~~~~~~~~~~~')
+    print('\n~~~~~~~~~~~~~~ Evaluating method of creating two to one synthetic samples per class ~~~~~~~~~~~~~~')
     synthetic_data = pickle.load(
         open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'rb'))
 
     synthetic_data = synthetic_data.drop(['label'], axis=1)
 
     ks = KSTest.compute(synthetic_data, real_data)
-    ks_test_data = KSTest.compute(synthetic_data, test_data)
     print('Inverted Kolmogorov-Smirnov D statistic on Train Data: {}'.format(ks))
-    print('Inverted Kolmogorov-Smirnov D statistic on Test Data: {}'.format(ks_test_data))
 
-    #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-    #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
 
-train_gan(n_epochs=300)
+#train_gan(n_epochs=300)
 
-#generate_samples_to_reach_30K_per_class()
+generate_samples_to_reach_30K_per_class()
 generate_2to1_synthetic_samples()
 evaluate_synthetic_data()
 

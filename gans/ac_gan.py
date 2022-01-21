@@ -256,6 +256,8 @@ def train_gan(epochs=100):
                 epoch_acc.append(acc)
                 epoch_precision.append(precision)
 
+        if epoch > 290:
+            torch.save(D, 'ac_gan/AC_GAN_Discriminator_save' + str(epoch) + '.pth')
         print(
             "[Epoch %d/%d] [D loss: %f, acc: %d%%] [G loss: %f]"
             % (epoch, epochs, mean(epoch_D_loss), 100 * mean(epoch_D_acc), mean(epoch_G_loss)))
@@ -458,7 +460,7 @@ def evaluate_synthetic_data():
 
     print('\n~~~~~~~~~~~~~~ Evaluating method of creating that many samples to reach 30K per class ~~~~~~~~~~~~~~')
     synthetic_data = pickle.load(
-        open('../data/synthetic_data/ac_gan/synthetic_data_30K_per_class', 'rb'))
+        open('../data/synthetic_data/ac_gan/synthetic_data_2_to_1', 'rb'))
 
     synthetic_data = synthetic_data.drop(['label'], axis=1)
 
@@ -467,8 +469,8 @@ def evaluate_synthetic_data():
     print('Inverted Kolmogorov-Smirnov D statistic on Train Data: {}'.format(ks))
     print('Inverted Kolmogorov-Smirnov D statistic on Test Data: {}'.format(ks_test_data))
 
-    #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-    #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
     print('\n~~~~~~~~~~~~~~ Evaluating method of creating two to one synthetic samples  per class ~~~~~~~~~~~~~~')
     synthetic_data = pickle.load(
@@ -481,11 +483,11 @@ def evaluate_synthetic_data():
     print('Inverted Kolmogorov-Smirnov D statistic on Train Data: {}'.format(ks))
     print('Inverted Kolmogorov-Smirnov D statistic on Test Data: {}'.format(ks_test_data))
 
-    #kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
-    #print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
+    kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
 
-def predict_bot_class(synthetic_data):
+def predict_bot_class(synthetic_data, d=299):
     scaler = joblib.load("ac_gan/scaler.save")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     """
@@ -502,6 +504,8 @@ def predict_bot_class(synthetic_data):
     test_orig_data = scaler.transform(test_orig_data)
     test_orig_data = torch.tensor(test_orig_data, dtype=torch.float32).to(device)
 
+    disc = str(d)
+    print('Evaluating with Discriminator of epoch:', d)
     discriminator = torch.load('ac_gan/AC_GAN_Discriminator_save.pth')
     discriminator.eval()
     _, predictions = discriminator(test_orig_data)
@@ -513,25 +517,24 @@ def predict_bot_class(synthetic_data):
     print("Precision {:.5f}".format(metrics.precision_score(ground_truth, D_predictions, average='macro')))
     print("F1-score {:.5f}".format(metrics.f1_score(ground_truth, D_predictions, average='macro')))
     print("Recall-score {:.5f}".format(metrics.recall_score(ground_truth, D_predictions, average='macro')))
-    print("G-Mean {:.5f}".format(geometric_mean_score(ground_truth, D_predictions, correction=0.0001)))
+    print("G-Mean {:.5f}".format(geometric_mean_score(ground_truth, D_predictions, average='macro')))
     print("==============================\n")
 
     ############################  Classify only Synthetic Data  ############################
-    synthetic_data = synthetic_data.sample(n=len(test_original_data.index))
-    ground_truth = synthetic_data['label']
-    synth_data = synthetic_data.drop('label', axis=1)
-    synth_data = scaler.transform(synth_data)
-    synth_data = torch.tensor(synth_data, dtype=torch.float32).to(device)
+    y_test = synthetic_data['label']
+    X_train = synthetic_data.drop('label', axis=1)
+    X_train = scaler.transform(X_train)
+    X_train = torch.tensor(X_train, dtype=torch.float32).to(device)
 
-    _, predictions = discriminator(synth_data)
+    _, predictions = discriminator(X_train)
     D_predictions = np.argmax(predictions.cpu().detach().numpy(), axis=1)
 
     print("~~~~~~~~~~~~~~ Discriminator Performance on Synthetic Data ~~~~~~~~~~~~~~~~")
-    print("Accuracy {:.5f}".format(metrics.accuracy_score(ground_truth, D_predictions)))
-    print("Precision {:.5f}".format(metrics.precision_score(ground_truth, D_predictions, average='macro')))
-    print("F1-score {:.5f}".format(metrics.f1_score(ground_truth, D_predictions, average='macro')))
-    print("Recall-score {:.5f}".format(metrics.recall_score(ground_truth, D_predictions, average='macro')))
-    print("G-Mean {:.5f}".format(geometric_mean_score(ground_truth, D_predictions, correction=0.0001)))
+    print("Accuracy {:.5f}".format(metrics.accuracy_score(y_test, D_predictions)))
+    print("Precision {:.5f}".format(metrics.precision_score(y_test, D_predictions, average='macro')))
+    print("F1-score {:.5f}".format(metrics.f1_score(y_test, D_predictions, average='macro')))
+    print("Recall-score {:.5f}".format(metrics.recall_score(y_test, D_predictions, average='macro')))
+    print("G-Mean {:.5f}".format(geometric_mean_score(y_test, D_predictions, average='macro')))
     print("==============================\n")
 
     ############################  Classify on Mixed Data  ############################
@@ -552,11 +555,11 @@ def predict_bot_class(synthetic_data):
     print("Precision {:.5f}".format(metrics.precision_score(ground_truth, D_predictions, average='macro')))
     print("F1-score {:.5f}".format(metrics.f1_score(ground_truth, D_predictions, average='macro')))
     print("Recall-score {:.5f}".format(metrics.recall_score(ground_truth, D_predictions, average='macro')))
-    print("G-Mean {:.5f}".format(geometric_mean_score(ground_truth, D_predictions, correction=0.0001)))
+    print("G-Mean {:.5f}".format(geometric_mean_score(ground_truth, D_predictions, average='macro')))
     print("==============================\n")
 
 
-def ac_gan_classification(test_ac_gan=True):
+def ac_gan_classification(test_ac_gan=True, d=299):
     if test_ac_gan:
         print('------- Classification on AC-GAN test data -------')
         synthetic_test_data = pickle.load(open('../data/synthetic_data/ac_gan/synthetic_test_data', 'rb'))
@@ -567,20 +570,21 @@ def ac_gan_classification(test_ac_gan=True):
             open('../data/synthetic_data/conditional_gan_multiclass/synthetic_test_data', 'rb'))
         test_filename = 'cgan'
 
-    predict_bot_class(synthetic_test_data)
+    predict_bot_class(synthetic_test_data, d=d)
 
 
 #train_gan(epochs=300)
 
 #generate_samples_to_reach_30K_per_class()
 #generate_2to1_synthetic_samples()
-#generate_test_synthetic_data(balanced=False)
 
 #print('\n~~~~~~~~~~~~~~ Evaluating method of creating 30K new samples for each class ~~~~~~~~~~~~~~')
-#evaluate_synthetic_data()
+evaluate_synthetic_data()
 
-# predict_bot_class(synthetic_data=pickle.load(open('../data/synthetic_data/ac_gan'
-# '/synthetic_data_30K_per_class', 'rb')))
 
-generate_test_synthetic_data(balanced=False)
-ac_gan_classification(test_ac_gan=False)
+#generate_test_synthetic_data(balanced=False)
+#ac_gan_classification(test_ac_gan=True, d=299)
+
+
+
+

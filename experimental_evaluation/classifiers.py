@@ -61,7 +61,7 @@ def run_classifiers(X_train, X_test, y_train, y_test):
         f1.append(f1_score)
         recall = round(metrics.recall_score(y_test, y_pred, average='macro'), 5)
         rec.append(recall)
-        g_mean = round(geometric_mean_score(y_test, y_pred, correction=0.0001), 5)
+        g_mean = round(geometric_mean_score(y_test, y_pred, average='macro'), 5)
         g_m.append(g_mean)
 
         print('Results for {:}'.format(classifier))
@@ -129,7 +129,7 @@ def evaluation_metrics(classifier, y_test, y_pred):
     f1.append(f1_score)
     recall = round(metrics.recall_score(y_test, y_pred, average='macro'), 5)
     rec.append(recall)
-    g_mean = round(geometric_mean_score(y_test, y_pred, correction=0.0001), 5)
+    g_mean = round(geometric_mean_score(y_test, y_pred, average='macro'), 5)
     g_m.append(g_mean)
 
     print('Results for {:}'.format(classifier))
@@ -137,6 +137,6 @@ def evaluation_metrics(classifier, y_test, y_pred):
     print("Precision {:.5f}".format(metrics.precision_score(y_test, y_pred, average='macro')))
     print("F1-score {:.5f}".format(metrics.f1_score(y_test, y_pred, average='macro')))
     print("Recall-score {:.5f}".format(metrics.recall_score(y_test, y_pred, average='macro')))
-    print("G-Mean {:.5f}".format(geometric_mean_score(y_test, y_pred, correction=0.0001)))
+    print("G-Mean {:.5f}".format(geometric_mean_score(y_test, y_pred, average='macro')))
     print("==============================\n")
     return acc, prec, f1, rec, g_m

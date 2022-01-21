@@ -1,5 +1,7 @@
 import pickle
 import time
+
+import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import RandomForestClassifier
 from imblearn.over_sampling import ADASYN
@@ -7,6 +9,7 @@ from yellowbrick.classifier import ROCAUC, PrecisionRecallCurve
 from imblearn.combine import SMOTEENN
 from classifiers import run_classifiers, results_to_df, evaluation_metrics
 from sklearn.metrics import classification_report
+from synthetic_data_evaluation import evaluate_synthetic_data
 from roc_curves import draw_plots
 import warnings
 
@@ -14,8 +17,8 @@ warnings.filterwarnings("ignore", category=Warning)
 
 
 def run_RF(X_train, X_test, y_train, y_test, print_ROC=False):
-
-    classifier = RandomForestClassifier(n_jobs=2, random_state=1)
+    classifier = RandomForestClassifier(n_jobs=-1, random_state=14, n_estimators=180, min_samples_split=2,
+                                        max_features=0.33, min_samples_leaf=1, max_depth=None, criterion='gini')
 
     start_time = time.time()
     classifier.fit(X_train, y_train)
@@ -34,6 +37,12 @@ def run_RF(X_train, X_test, y_train, y_test, print_ROC=False):
 
     auc_score = 0
     pr_score = 0
+    visualizer = ROCAUC(classifier, is_fitted=True, per_class=False, micro=False, macro=True)
+    visualizer.fit(X_train, y_train)  # Fit the training data to the visualizer
+    visualizer.score(X_test, y_test)  # Evaluate the model on the test data
+    visualizer.show()  # Finalize and render the figure
+    auc_score = visualizer.score(X_test, y_test)
+    print("AUC score {:.5f} ".format(auc_score))
     if print_ROC:
         visualizer = ROCAUC(classifier, is_fitted=True, per_class=False, micro=False, macro=True)
         visualizer.fit(X_train, y_train)  # Fit the training data to the visualizer
@@ -54,33 +63,21 @@ def run_RF(X_train, X_test, y_train, y_test, print_ROC=False):
 
 ############################### CLASS IMBALANCE ########################################################
 
-def train_and_test_on_original_data(adasyn=False, smote=False, fraction=1.0, rf=False):
+def train_and_test_on_original_data(adasyn=False, smote=False, rf=False, return_synthetic_data=False):
     train_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
     test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
-
-    train_data = train_data.sample(frac=fraction, random_state=14)
-
-    frac = 'full'
-    if fraction == 0.5:
-        print('Train with 1/2 training samples')
-        frac = 'limited'
-    elif fraction == 0.25:
-        print('Train with 1/4 training samples')
-        frac = 'short'
-    else:
-        print('Train with full training set')
 
     print(train_data['label'].value_counts())
 
     y_train = train_data['label']
     y_test = test_data['label']
 
-    # Drop unwanted columns
     X_train = train_data.drop(['label'], axis=1)
     X_test = test_data.drop(['label'], axis=1)
 
     # Scale our data in the range of (0, 1)
     scaler = MinMaxScaler()
+    X_train_df = X_train
     X_train = scaler.fit_transform(X=X_train)
     X_test = scaler.transform(X=X_test)
 
@@ -95,33 +92,40 @@ def train_and_test_on_original_data(adasyn=False, smote=False, fraction=1.0, rf=
             print('\n~~~~~~~~ Training Random Forest with ADASYN ~~~~~~~~~~~~~~~')
             adasyn = ADASYN(random_state=42, n_jobs=-1)
             X_adasyn, y_adasyn = adasyn.fit_resample(X_train, y_train)
-            acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_adasyn, X_test, y_adasyn, y_test, print_ROC=True)
+
+            acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_adasyn, X_test, y_adasyn, y_test, print_ROC=False)
             df = results_to_df(acc, prec, f1, rec, g_m, auc_score, pr_score, rf=True)
-            df.to_csv('./class_imbalance/original/rf_train_on_original_' + frac + '_adasyn.csv')
+            df.to_csv('./class_imbalance/original/rf_train_on_original_adasyn.csv')
+
+            if return_synthetic_data:
+                augmented_data = pd.DataFrame(data=X_adasyn, columns=X_train_df.columns)
+                original_data = pd.DataFrame(X_train)
+                synthetic_samples_ada = augmented_data[~augmented_data.isin(original_data)].dropna()
+                return synthetic_samples_ada, scaler
+
         elif smote:
             print('\n~~~~~~~~ Training Random Forest with SMOTE ENN ~~~~~~~~~~~~~~~')
             smote = SMOTEENN(random_state=42, n_jobs=-1)
             X_smote, y_smote = smote.fit_resample(X_train, y_train)
-            acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_smote, X_test, y_smote, y_test, print_ROC=True)
+            acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_smote, X_test, y_smote, y_test, print_ROC=False)
             df = results_to_df(acc, prec, f1, rec, g_m, auc_score, pr_score, rf=True)
-            df.to_csv('./class_imbalance/original/rf_train_on_original_' + frac + '_smote.csv')
+            df.to_csv('./class_imbalance/original/rf_train_on_original_smote.csv')
         else:
             print('\n~~~~~~~~ Training Random Forest ~~~~~~~~~~~~~~~')
-            acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_train, X_test, y_train, y_test, print_ROC=True)
+            acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_train, X_test, y_train, y_test, print_ROC=False)
             df = results_to_df(acc, prec, f1, rec, g_m, auc_score, pr_score, rf=True)
-            df.to_csv('./class_imbalance/original/rf_train_on_original_' + frac + '.csv')
+            df.to_csv('./class_imbalance/original/rf_train_on_original.csv')
     else:
         print('\n~~~~~~~~ Training all Classifiers ~~~~~~~~~~~~~~~')
         acc, prec, f1, rec, g_m = run_classifiers(X_train, X_test, y_train, y_test)
         df = results_to_df(acc, prec, f1, rec, g_m, auc_score=0, pr_score=0, rf=False)
-        df.to_csv('./class_imbalance/original/all_classifiers_train_on_original_' + frac + '.csv')
+        df.to_csv('./class_imbalance/original/all_classifiers_train_on_original.csv')
 
 
-def train_on_augmented_and_test_on_original_data(ac_gan=False, two_to_1=False, specific_classes=False, fraction=1.0, rf=False):
+def train_on_augmented_and_test_on_original_data(ac_gan=False, wcgan=False, two_to_1=False, rf=False):
     print('\n ~~~~~~~~~~~~~~~ Train with Augmented Data and Test on Original ~~~~~~~~~~~~~~~~')
 
     original_train_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
-    original_train_data = original_train_data.sample(frac=fraction, random_state=14)
     original_test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
 
     if two_to_1:
@@ -139,10 +143,20 @@ def train_on_augmented_and_test_on_original_data(ac_gan=False, two_to_1=False, s
             synthetic_data = pickle.load(
                 open('../data/synthetic_data/ac_gan/synthetic_data_30K_per_class', 'rb'))
         filename = 'ac_gan_'
+    elif wcgan:
+        if two_to_1:
+            synthetic_data = pickle.load(
+                open('../data/synthetic_data/w_conditional_gan_multi/synthetic_data_2_to_1', 'rb'))
+
+        else:
+            synthetic_data = pickle.load(
+                open('../data/synthetic_data/w_conditional_gan_multi/synthetic_data_30K_per_class', 'rb'))
+
+        filename = 'wcgan_'
     else:
         if two_to_1:
             synthetic_data = pickle.load(
-                    open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'rb'))
+                open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'rb'))
 
         else:
             synthetic_data = pickle.load(
@@ -176,26 +190,30 @@ def train_on_augmented_and_test_on_original_data(ac_gan=False, two_to_1=False, s
     y_train = y_train.astype('int')
     y_test = y_test.astype('int')
 
-    if fraction == 1.0:
-        frac = '_full'
-    elif fraction == 0.5:
-        frac = '_limited'
-    else:
-        frac = '_short'
-
     if rf:
         print('\n~~~~~~~~ Training Random Forest ~~~~~~~~~~~~~~~')
-        acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_train, X_test, y_train, y_test, print_ROC=True)
+        acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_train, X_test, y_train, y_test, print_ROC=False)
         df = results_to_df(acc, prec, f1, rec, g_m, auc_score, pr_score, rf=True)
-        df.to_csv('./class_imbalance/augmented/rf_train_on_augmented_' + filename + method + frac + '.csv')
+        df.to_csv('./class_imbalance/augmented/rf_train_on_augmented_' + filename + method + '.csv')
     else:
         print('\n~~~~~~~~ Training All Classifiers ~~~~~~~~~~~~~~~')
         acc, prec, f1, rec, g_m = run_classifiers(X_train, X_test, y_train, y_test)
         df = results_to_df(acc, prec, f1, rec, g_m, auc_score=0, pr_score=0, rf=False)
-        df.to_csv('./class_imbalance/augmented/all_classifiers_train_on_augmented_' + filename + frac + '.csv')
+        df.to_csv('./class_imbalance/augmented/all_classifiers_train_on_augmented_' + filename + '.csv')
 
 
 # Test on Original Data
-#train_and_test_on_original_data(adasyn=False, smote=False, fraction=1.0, rf=True)
-train_on_augmented_and_test_on_original_data(ac_gan=False, two_to_1=True, fraction=0.25, rf=True)
-#draw_plots(fraction=0.5)
+# train_and_test_on_original_data(adasyn=False, smote=False, rf=True)
+synthetic_data_ada, scaler = train_and_test_on_original_data(adasyn=True, smote=False, rf=True,
+                                                             return_synthetic_data=False)
+# train_and_test_on_original_data(adasyn=False, smote=True, rf=True)
+
+# train_on_augmented_and_test_on_original_data(ac_gan=False, wcgan=False, two_to_1=True, rf=True)
+# train_on_augmented_and_test_on_original_data(ac_gan=False, wcgan=False, two_to_1=False, rf=True)
+
+# train_on_augmented_and_test_on_original_data(ac_gan=True, wcgan=False, two_to_1=True, rf=True)
+# train_on_augmented_and_test_on_original_data(ac_gan=True, wcgan=False, two_to_1=False, rf=True)
+
+evaluate_synthetic_data(synthetic_data_ada, scaler)
+
+# draw_plots()

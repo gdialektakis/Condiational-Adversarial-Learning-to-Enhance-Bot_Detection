@@ -7,9 +7,8 @@ from imblearn.combine import SMOTEENN
 from imblearn.over_sampling import ADASYN
 
 
-def draw_plots(fraction):
+def draw_plots():
     original_train_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
-    original_train_data = original_train_data.sample(frac=fraction, random_state=14)
     original_test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
 
     classifier = RandomForestClassifier(random_state=14)
@@ -157,7 +156,6 @@ def draw_plots(fraction):
                     open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'rb'))
 
             original_train_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
-            #original_train_data = original_train_data.sample(frac=fraction, random_state=14)
             original_test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
 
             augmented_df = original_train_data.append(synthetic_data)

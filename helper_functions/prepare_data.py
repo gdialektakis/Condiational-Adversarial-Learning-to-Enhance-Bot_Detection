@@ -18,7 +18,7 @@ def prepare_multiclass_data(df=pickle.load(open('../data/original_data/multi_cla
         df = df.drop(['max_appearance_of_punc_mark'], axis=1)
 
     # Keep 20% of the data for later testing
-    train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
+    train_set, test_set = train_test_split(df, test_size=0.3, random_state=42)
     pickle.dump(test_set, open('../data/original_data/test_multiclass_data', 'wb'))
     pickle.dump(train_set, open('../data/original_data/train_multiclass_data', 'wb'))
 
@@ -30,7 +30,7 @@ def prepare_binary_data(data=pickle.load(open('../data/original_data/final_data_
     df = df.applymap(lambda x: int(x) if isinstance(x, bool) else x)
 
     # Drop unwanted columns
-    df = df.drop(['user_name', 'user_screen_name', 'user_id'], axis=1)
+    df = df.drop(['user_name', 'user_screen_name', 'user_id', 'time'], axis=1)
     if 'max_appearance_of_punc_mark' in df.columns:
         df = df.drop(['max_appearance_of_punc_mark'], axis=1)
 
@@ -44,7 +44,7 @@ def prepare_binary_data(data=pickle.load(open('../data/original_data/final_data_
         filename = 'humans'
 
     # Keep 20% of the data for later testing
-    train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
+    train_set, test_set = train_test_split(df, test_size=0.3, random_state=42)
     pickle.dump(test_set, open('../data/test_binary_data' + filename, 'wb'))
     pickle.dump(train_set, open('../data/train_binary_data' + filename, 'wb'))
 
@@ -68,5 +68,5 @@ def merge_dataframes():
 
 #prepare_binary_data(bots=True)
 #prepare_binary_data(bots=False)
-#prepare_multiclass_data()
-merge_dataframes()
+#merge_dataframes()
+prepare_multiclass_data()

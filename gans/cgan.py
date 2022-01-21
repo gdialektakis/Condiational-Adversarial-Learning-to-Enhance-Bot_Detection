@@ -316,29 +316,44 @@ def create_final_synthetic_dataset(test=False):
     return final_df
 
 
-def evaluate_synthetic_data(synthetic_data):
-    real_data_bots = pickle.load(open('../data/original_data/train_binary_data_bots', 'rb'))
-    real_data_humans = pickle.load(open('../data/original_data/train_binary_data_humans', 'rb'))
-
-    # Concatenate human and bot synthetic samples
-    pdList = [real_data_bots, real_data_humans]
-    real_data = pd.concat(pdList)
-
-    # Shuffle the dataframe
-    real_data = real_data.sample(frac=1)
+def evaluate_synthetic_data():
+    real_data = pickle.load(open('../data/original_data/train_multiclass_data', 'rb'))
     real_data = real_data.drop(['label'], axis=1)
-    """
-    This metric uses the two-sample Kolmogorov–Smirnov test to compare the distributions of 
-    continuous columns using the empirical CDF. The output for each column is 1 minus the KS Test D statistic, 
-    which indicates the maximum distance between the expected CDF and the observed CDF values.
-    """
+
+    test_data = pickle.load(open('../data/original_data/test_multiclass_data', 'rb'))
+    test_data = test_data.drop(['label'], axis=1)
+
+    print('\n~~~~~~~~~~~~~~ Synthetic Data Evaluation ~~~~~~~~~~~~~~')
+
+    print('\n~~~~~~~~~~~~~~ Evaluating method of creating that many samples to reach 30K per class ~~~~~~~~~~~~~~')
+    synthetic_data = pickle.load(
+        open('../data/synthetic_data/cgan/synthetic_data_2_to_1', 'rb'))
+
+    synthetic_data = synthetic_data.drop(['label'], axis=1)
+
     ks = KSTest.compute(synthetic_data, real_data)
-    print('Inverted Kolmogorov-Smirnov D statistic: {}'.format(ks))
+    ks_test_data = KSTest.compute(synthetic_data, test_data)
+    print('Inverted Kolmogorov-Smirnov D statistic on Train Data: {}'.format(ks))
+    print('Inverted Kolmogorov-Smirnov D statistic on Test Data: {}'.format(ks_test_data))
+
     kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
     print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
-    print(synthetic_data)
+    """
+    print('\n~~~~~~~~~~~~~~ Evaluating method of creating two to one synthetic samples  per class ~~~~~~~~~~~~~~')
+    synthetic_data = pickle.load(
+        open('../data/synthetic_data/cgan/synthetic_data_2_to_1', 'rb'))
+
+    synthetic_data = synthetic_data.drop(['label'], axis=1)
+
+    ks = KSTest.compute(synthetic_data, real_data)
+    ks_test_data = KSTest.compute(synthetic_data, test_data)
+    print('Inverted Kolmogorov-Smirnov D statistic on Train Data: {}'.format(ks))
+    print('Inverted Kolmogorov-Smirnov D statistic on Test Data: {}'.format(ks_test_data))
+    """
+    # kl_divergence = evaluate(synthetic_data, real_data, metrics=['ContinuousKLDivergence'])
+    # print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
 
 #train_gan(epochs=300)
 
-evaluate_synthetic_data(synthetic_data=create_final_synthetic_dataset(test=True))
+evaluate_synthetic_data()
