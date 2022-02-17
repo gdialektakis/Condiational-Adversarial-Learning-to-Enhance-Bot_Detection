@@ -66,7 +66,33 @@ def merge_dataframes():
     pickle.dump(test_data, open('../data/original_data/test_binary_data', 'wb'))
 
 
-#prepare_binary_data(bots=True)
-#prepare_binary_data(bots=False)
-#merge_dataframes()
-prepare_multiclass_data()
+def create_mixed_augmented_test_dataset():
+    cgan_test_data = pickle.load(
+        open('../data/synthetic_data/conditional_gan_multiclass/synthetic_test_data_custom', 'rb'))
+    ac_gan_test_data = pickle.load(
+        open('../data/synthetic_data/ac_gan/synthetic_test_data_custom', 'rb'))
+
+    mixed_synthetic_data = cgan_test_data.append(ac_gan_test_data)
+    mixed_synthetic_data = mixed_synthetic_data.sample(frac=1)
+
+    pickle.dump(mixed_synthetic_data, open('../data/synthetic_data/mixed_synthetic_test_data', 'wb'))
+
+
+def create_mixed_augmented_train_dataset():
+    cgan_train_data = pickle.load(
+        open('../data/synthetic_data/conditional_gan_multiclass/synthetic_data_2_to_1', 'rb'))
+    ac_gan_train_data = pickle.load(
+        open('../data/synthetic_data/ac_gan/synthetic_data_2_to_1', 'rb'))
+
+    mixed_synthetic_data = cgan_train_data.append(ac_gan_train_data)
+    mixed_synthetic_data = mixed_synthetic_data.sample(frac=1)
+
+    pickle.dump(mixed_synthetic_data, open('../data/synthetic_data/mixed_synthetic_train_data', 'wb'))
+
+
+# prepare_binary_data(bots=True)
+# prepare_binary_data(bots=False)
+# merge_dataframes()
+# prepare_multiclass_data()
+create_mixed_augmented_test_dataset()
+create_mixed_augmented_train_dataset()

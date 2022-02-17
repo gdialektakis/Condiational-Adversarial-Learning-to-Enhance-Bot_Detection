@@ -6,17 +6,13 @@ import pickle
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.model_selection import train_test_split
-from torch import FloatTensor, LongTensor
 from torch.autograd import Variable
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler
 import joblib
 import matplotlib.pyplot as plt
-from sdv.evaluation import evaluate
 from sdv.metrics.tabular import KSTest
 from statistics import mean
 import helper_functions.transform_booleans as transform_bool

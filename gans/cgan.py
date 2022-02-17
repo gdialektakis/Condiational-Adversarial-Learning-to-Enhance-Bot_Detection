@@ -2,13 +2,10 @@
 Import necessary libraries to create a generative adversarial network
 The code is developed using the PyTorch library
 """
-import os
 import pickle
-import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import pandas as pd
@@ -21,8 +18,6 @@ from sdv.metrics.tabular import KSTest
 from statistics import mean
 import helper_functions.transform_booleans as transform_bool
 import warnings
-import seaborn as sns
-
 warnings.filterwarnings('ignore')
 
 """

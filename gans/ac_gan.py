@@ -407,16 +407,16 @@ def generate_2to1_synthetic_samples():
     return final_df
 
 
-def generate_test_synthetic_data(balanced=False):
-    if balanced:
+def generate_test_synthetic_data(equal_to_adasyn=False):
+    if equal_to_adasyn:
         ## For each class, generate 2200 samples for testing
-        synthetic_data0, _ = generate_synthetic_samples(num_of_samples=2200, label=0)
-        synthetic_data1, _ = generate_synthetic_samples(num_of_samples=2200, label=1)
-        synthetic_data2, _ = generate_synthetic_samples(num_of_samples=2200, label=2)
-        synthetic_data3, _ = generate_synthetic_samples(num_of_samples=2200, label=3)
-        synthetic_data4, _ = generate_synthetic_samples(num_of_samples=2200, label=4)
-        synthetic_data5, _ = generate_synthetic_samples(num_of_samples=2200, label=5)
-        filename = 'synthetic_test_data_balanced'
+        synthetic_data0, _ = generate_synthetic_samples(num_of_samples=6633, label=0)
+        synthetic_data1, _ = generate_synthetic_samples(num_of_samples=6657, label=1)
+        synthetic_data2, _ = generate_synthetic_samples(num_of_samples=6318, label=2)
+        synthetic_data3, _ = generate_synthetic_samples(num_of_samples=6328, label=3)
+        synthetic_data4, _ = generate_synthetic_samples(num_of_samples=6224, label=4)
+        synthetic_data5, _ = generate_synthetic_samples(num_of_samples=6437, label=5)
+        filename = 'synthetic_test_data_custom'
     else:
 
         """
@@ -559,16 +559,19 @@ def predict_bot_class(synthetic_data, d=299):
     print("==============================\n")
 
 
-def ac_gan_classification(test_ac_gan=True, d=299):
+def ac_gan_classification(test_ac_gan=True, test_cgan=False, d=299):
     if test_ac_gan:
         print('------- Classification on AC-GAN test data -------')
-        synthetic_test_data = pickle.load(open('../data/synthetic_data/ac_gan/synthetic_test_data', 'rb'))
+        synthetic_test_data = pickle.load(open('../data/synthetic_data/ac_gan/synthetic_test_data_custom', 'rb'))
         test_filename = 'ac_gan'
-    else:
+    elif test_cgan:
         print('------- Classification on Conditional GAN test data -------')
         synthetic_test_data = pickle.load(
-            open('../data/synthetic_data/conditional_gan_multiclass/synthetic_test_data', 'rb'))
+            open('../data/synthetic_data/conditional_gan_multiclass/synthetic_test_data_custom', 'rb'))
         test_filename = 'cgan'
+    else:
+        print('------- Classification on mixed data from CGAN and AC-GAN -------')
+        synthetic_test_data = pickle.load(open('../data/synthetic_data/mixed_synthetic_test_data', 'rb'))
 
     predict_bot_class(synthetic_test_data, d=d)
 
@@ -579,12 +582,8 @@ def ac_gan_classification(test_ac_gan=True, d=299):
 #generate_2to1_synthetic_samples()
 
 #print('\n~~~~~~~~~~~~~~ Evaluating method of creating 30K new samples for each class ~~~~~~~~~~~~~~')
-evaluate_synthetic_data()
+#evaluate_synthetic_data()
 
-
-#generate_test_synthetic_data(balanced=False)
-#ac_gan_classification(test_ac_gan=True, d=299)
-
-
-
+#generate_test_synthetic_data(equal_to_adasyn=True)
+ac_gan_classification(test_ac_gan=False, test_cgan=True)
 

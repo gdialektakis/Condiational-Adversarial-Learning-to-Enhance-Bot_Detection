@@ -2,10 +2,7 @@
 Import necessary libraries to create a generative adversarial network
 The code is developed using the PyTorch library
 """
-import os
-import umap
 import pickle
-import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -16,15 +13,12 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler
 import joblib
 import matplotlib.pyplot as plt
-from sdv.evaluation import evaluate
 from sdv.metrics.tabular import KSTest
 from statistics import mean
-from sklearn.model_selection import train_test_split
 from sdv.metrics.tabular import BNLikelihood, BNLogLikelihood, GMLogLikelihood
 from sdv.metrics.tabular import LogisticDetection, SVCDetection
 import helper_functions.transform_booleans as transform_bool
 import warnings
-import seaborn as sns
 
 warnings.filterwarnings('ignore')
 

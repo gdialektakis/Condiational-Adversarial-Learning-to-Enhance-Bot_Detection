@@ -1,20 +1,12 @@
-import pickle
 import time
-from collections import Counter
 import pandas as pd
-import numpy as np
-from matplotlib import pyplot as plt
-from sklearn import model_selection, metrics
-from sklearn.preprocessing import MinMaxScaler
+from sklearn import metrics
 from sklearn.svm import LinearSVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.neural_network import MLPClassifier
-from imblearn.over_sampling import SMOTE, ADASYN
 from imblearn.metrics import geometric_mean_score
-from yellowbrick.classifier import ROCAUC, PrecisionRecallCurve
-from imblearn.combine import SMOTEENN
 import warnings
 
 warnings.filterwarnings("ignore", category=Warning)
@@ -69,7 +61,7 @@ def run_classifiers(X_train, X_test, y_train, y_test):
         print("Precision {:.5f}".format(metrics.precision_score(y_test, y_pred, average='macro')))
         print("F1-score {:.5f}".format(metrics.f1_score(y_test, y_pred, average='macro')))
         print("Recall-score {:.5f}".format(metrics.recall_score(y_test, y_pred, average='macro')))
-        print("G-Mean {:.5f}".format(geometric_mean_score(y_test, y_pred, correction=0.0001)))
+        print("G-Mean {:.5f}".format(geometric_mean_score(y_test, y_pred, average='macro')))
         print("==============================\n")
 
     return acc, prec, f1, rec, g_m

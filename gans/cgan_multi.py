@@ -6,13 +6,10 @@ import pickle
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.model_selection import train_test_split
-from torch import FloatTensor, LongTensor
 from torch.autograd import Variable
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler
 import joblib
 import matplotlib.pyplot as plt
@@ -357,16 +354,16 @@ def generate_2to1_synthetic_samples():
     return final_df
 
 
-def generate_test_synthetic_data(two_to_one=False):
-    if two_to_one:
+def generate_test_synthetic_data(equal_to_adasyn=False):
+    if equal_to_adasyn:
         ## For each class, generate 2200 samples for testing
-        synthetic_data0, _ = generate_synthetic_samples(num_of_samples=2200, label=0)
-        synthetic_data1, _ = generate_synthetic_samples(num_of_samples=2200, label=1)
-        synthetic_data2, _ = generate_synthetic_samples(num_of_samples=2200, label=2)
-        synthetic_data3, _ = generate_synthetic_samples(num_of_samples=2200, label=3)
-        synthetic_data4, _ = generate_synthetic_samples(num_of_samples=2200, label=4)
-        synthetic_data5, _ = generate_synthetic_samples(num_of_samples=2200, label=5)
-        filename = 'synthetic_test_data_balanced'
+        synthetic_data0, _ = generate_synthetic_samples(num_of_samples=6633, label=0)
+        synthetic_data1, _ = generate_synthetic_samples(num_of_samples=6657, label=1)
+        synthetic_data2, _ = generate_synthetic_samples(num_of_samples=6318, label=2)
+        synthetic_data3, _ = generate_synthetic_samples(num_of_samples=6328, label=3)
+        synthetic_data4, _ = generate_synthetic_samples(num_of_samples=6224, label=4)
+        synthetic_data5, _ = generate_synthetic_samples(num_of_samples=6437, label=5)
+        filename = 'synthetic_test_data_custom'
     else:
 
         """
@@ -435,9 +432,9 @@ def evaluate_synthetic_data():
 
 #train_gan(n_epochs=300)
 
-generate_samples_to_reach_30K_per_class()
-generate_2to1_synthetic_samples()
-evaluate_synthetic_data()
-
+#generate_samples_to_reach_30K_per_class()
+#generate_2to1_synthetic_samples()
+#evaluate_synthetic_data()
+generate_test_synthetic_data(equal_to_adasyn=True)
 #generate_test_synthetic_data(balanced=False)
 

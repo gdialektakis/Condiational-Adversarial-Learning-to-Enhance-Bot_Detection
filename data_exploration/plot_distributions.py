@@ -9,6 +9,7 @@ import pickle
 
 pd.options.mode.chained_assignment = None
 
+
 def divide_df(df):
     """
     Divide the initial dataframe to sub-dataframes each containing a specific bot class.

@@ -1,6 +1,7 @@
 import pickle
 import time
 
+import joblib
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import RandomForestClassifier
@@ -9,8 +10,6 @@ from yellowbrick.classifier import ROCAUC, PrecisionRecallCurve
 from imblearn.combine import SMOTEENN
 from classifiers import run_classifiers, results_to_df, evaluation_metrics
 from sklearn.metrics import classification_report
-from synthetic_data_evaluation import evaluate_synthetic_data
-from roc_curves import draw_plots
 import warnings
 
 warnings.filterwarnings("ignore", category=Warning)
@@ -44,12 +43,6 @@ def run_RF(X_train, X_test, y_train, y_test, print_ROC=False):
     auc_score = visualizer.score(X_test, y_test)
     print("AUC score {:.5f} ".format(auc_score))
     if print_ROC:
-        visualizer = ROCAUC(classifier, is_fitted=True, per_class=False, micro=False, macro=True)
-        visualizer.fit(X_train, y_train)  # Fit the training data to the visualizer
-        visualizer.score(X_test, y_test)  # Evaluate the model on the test data
-        visualizer.show()  # Finalize and render the figure
-        auc_score = visualizer.score(X_test, y_test)
-        print("AUC score {:.5f} ".format(auc_score))
 
         viz = PrecisionRecallCurve(classifier, micro=True, per_class=True)
         viz.fit(X_train, y_train)
@@ -112,7 +105,7 @@ def train_and_test_on_original_data(adasyn=False, smote=False, rf=False, return_
             df.to_csv('./class_imbalance/original/rf_train_on_original_smote.csv')
         else:
             print('\n~~~~~~~~ Training Random Forest ~~~~~~~~~~~~~~~')
-            acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_train, X_test, y_train, y_test, print_ROC=False)
+            acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_train, X_test, y_train, y_test, print_ROC=True)
             df = results_to_df(acc, prec, f1, rec, g_m, auc_score, pr_score, rf=True)
             df.to_csv('./class_imbalance/original/rf_train_on_original.csv')
     else:
@@ -203,9 +196,13 @@ def train_on_augmented_and_test_on_original_data(ac_gan=False, wcgan=False, two_
 
 
 # Test on Original Data
-# train_and_test_on_original_data(adasyn=False, smote=False, rf=True)
-synthetic_data_ada, scaler = train_and_test_on_original_data(adasyn=True, smote=False, rf=True,
-                                                             return_synthetic_data=False)
+train_and_test_on_original_data(adasyn=False, smote=False, rf=True)
+#synthetic_data_ada, scaler = train_and_test_on_original_data(adasyn=True, smote=False, rf=True,
+#                                                            return_synthetic_data=True)
+
+#pickle.dump(synthetic_data_ada, open('synthetic_data_adasyn', 'wb'))
+#scaler_filename = "scaler.save"
+#joblib.dump(scaler, scaler_filename)
 # train_and_test_on_original_data(adasyn=False, smote=True, rf=True)
 
 # train_on_augmented_and_test_on_original_data(ac_gan=False, wcgan=False, two_to_1=True, rf=True)
@@ -214,6 +211,6 @@ synthetic_data_ada, scaler = train_and_test_on_original_data(adasyn=True, smote=
 # train_on_augmented_and_test_on_original_data(ac_gan=True, wcgan=False, two_to_1=True, rf=True)
 # train_on_augmented_and_test_on_original_data(ac_gan=True, wcgan=False, two_to_1=False, rf=True)
 
-evaluate_synthetic_data(synthetic_data_ada, scaler)
+#evaluate_synthetic_data(cgan=True, ac_gan=True)
 
 # draw_plots()
