@@ -9,19 +9,25 @@ def filter_data_by_dataset():
 
     df = pd.DataFrame(data)
     df['dataset'] = df['user_id'].map(usermap)
+
     caverlee_df = df[df['dataset'] == 'Caverlee']
     varol_df = df[df['dataset'] == 'Varol']
+    cresci_df = df[df['dataset'] == 'Cresci_Stock']
 
+    gilani_df = df[df['dataset'] == 'Gilani']
+
+    cresci_df = cresci_df.drop(['dataset'], axis=1)
     varol_df = varol_df.drop(['dataset'], axis=1)
     caverlee_df = caverlee_df.drop(['dataset'], axis=1)
 
-    pickle.dump(caverlee_df, open('../binary_data/old_data', 'wb'))
-    pickle.dump(varol_df, open('../binary_data/new_data', 'wb'))
-    df_varol = pickle.load(open('../binary_data/new_data', 'rb'))
-    df_caverlee = pickle.load(open('../binary_data/old_data', 'rb'))
+    gilani_df = gilani_df.drop(['dataset'], axis=1)
 
-    print(caverlee_df.head(10))
-    print(varol_df.head(10))
+    #pickle.dump(caverlee_df, open('../binary_data/old_data', 'wb'))
+    #pickle.dump(varol_df, open('../binary_data/new_data', 'wb'))
+    #pickle.dump(cresci_df, open('../binary_data/new_data2', 'wb'))
+    pickle.dump(gilani_df, open('../binary_data/new_data3', 'wb'))
+    #df_varol = pickle.load(open('../binary_data/new_data', 'rb'))
+    #df_caverlee = pickle.load(open('../binary_data/old_data', 'rb'))
 
 
 def prepare_multiclass_data(df=pickle.load(open('../data/original_data/multi_class_data', 'rb'))):
@@ -91,7 +97,7 @@ def prepare_old_data(data=pickle.load(open('../binary_data/old_data', 'rb')), bo
     pickle.dump(train_set, open('../binary_data/train_old_data_' + filename, 'wb'))
 
 
-def prepare_new_data(data=pickle.load(open('../binary_data/new_data', 'rb'))):
+def prepare_new_data(data=pickle.load(open('../binary_data/new_data3', 'rb'))):
     df = pd.DataFrame(data)
     df['label'] = df['label'].map({'human': 0, 'bot': 1, 'cyborg': 1})
     # Convert features that are boolean to integers
@@ -102,7 +108,7 @@ def prepare_new_data(data=pickle.load(open('../binary_data/new_data', 'rb'))):
     if 'max_appearance_of_punc_mark' in df.columns:
         df = df.drop(['max_appearance_of_punc_mark'], axis=1)
 
-    pickle.dump(df, open('../binary_data/new_data', 'wb'))
+    pickle.dump(df, open('../binary_data/new_data3', 'wb'))
 
 
 def merge_dataframes(old_data=True):
@@ -169,6 +175,6 @@ def create_mixed_augmented_train_dataset():
 #prepare_old_data(bots=False)
 #merge_dataframes(old_data=True)
 
+#filter_data_by_dataset()
 prepare_new_data()
 
-#filter_data_by_dataset()

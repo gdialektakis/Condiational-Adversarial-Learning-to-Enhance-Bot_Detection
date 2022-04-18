@@ -430,11 +430,11 @@ def evaluate_synthetic_data():
     print('Continuous Kullback–Leibler Divergence: {}'.format(kl_divergence))
 
 
-#train_gan(n_epochs=300)
+train_gan(n_epochs=300)
 
 #generate_samples_to_reach_30K_per_class()
 #generate_2to1_synthetic_samples()
 #evaluate_synthetic_data()
-generate_test_synthetic_data(equal_to_adasyn=True)
+#generate_test_synthetic_data(equal_to_adasyn=True)
 #generate_test_synthetic_data(balanced=False)
 

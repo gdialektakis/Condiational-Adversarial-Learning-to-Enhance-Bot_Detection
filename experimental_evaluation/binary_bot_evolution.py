@@ -78,7 +78,7 @@ def train_on_old_data():
     df.to_csv('train_and_test_on_old_data_results.csv')
 
     ########## Test on new data #########
-    test_data_new = pickle.load(open('../binary_data/new_data', 'rb'))
+    test_data_new = pickle.load(open('../binary_data/new_data3', 'rb'))
 
     print('New data distribution')
     print(test_data_new['label'].value_counts())
@@ -96,7 +96,7 @@ def train_on_old_data():
     df.to_csv('train_on_old_and_test_on_new_data_results.csv')
 
 
-def train_on_augmented_data(cgan=True, ac_gan=False):
+def train_on_augmented_data(cgan=True, ac_gan=False, mixed=False, adasyn=False):
     print('~~~~~~~~~~ Train on Augmented Data')
     train_data = pickle.load(open('../binary_data/train_old_data', 'rb'))
     test_data = pickle.load(open('../binary_data/test_old_data', 'rb'))
@@ -105,14 +105,51 @@ def train_on_augmented_data(cgan=True, ac_gan=False):
         print('\n ~~~~~~~~~~~~~~~ Train with Augmented CGAN Data ~~~~~~~~~~~~~~~~')
         synthetic_data = pickle.load(open('../binary_data/synthetic_data/cgan/synthetic_binary_data', 'rb'))
         filename = 'cgan'
-    else:
+    elif ac_gan:
         print('\n ~~~~~~~~~~~~~~~ Train with Augmented AC-GAN Data ~~~~~~~~~~~~~~~~')
         synthetic_data = pickle.load(open('../binary_data/synthetic_data/ac_gan/synthetic_binary_data', 'rb'))
         filename = 'ac_gan'
+    elif adasyn:
+        y_train = train_data['label']
 
-    synthetic_data = synthetic_data.sample(frac=1)
-    augmented_data = train_data.append(synthetic_data)
-    augmented_data = augmented_data.sample(frac=1)
+        # Drop unwanted columns
+        X_train = train_data.drop(['label'], axis=1)
+        adasyn = ADASYN(random_state=42, n_jobs=-1)
+        X_adasyn, y_adasyn = adasyn.fit_resample(X_train, y_train)
+
+        scaler = MinMaxScaler()
+        X_adasyn = scaler.fit_transform(X=X_adasyn)
+        test_data_new = pickle.load(open('../binary_data/new_data3', 'rb'))
+        X_test_new = test_data_new.drop(['label'], axis=1)
+        X_test_new = scaler.transform(X=X_test_new)
+        y_test_new = test_data_new['label']
+
+        y_adasyn = y_adasyn.astype('int')
+        y_test_new = y_test_new.astype('int')
+
+        print('\n~~~~~~~~ Training Random Forest on Augmented ADASYN data and test on NEW data ~~~~~~~~~~~~~~~')
+        acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_adasyn, X_test_new, y_adasyn, y_test_new, print_ROC=False)
+
+        df = results_to_df(acc, prec, f1, rec, g_m, auc_score, pr_score, rf=True)
+        df.to_csv('train_on_augmented_adasyn_and_test_on_new_data_results.csv')
+
+        return
+
+    else:
+        print('\n ~~~~~~~~~~~~~~~ Train with Augmented Mixed Data ~~~~~~~~~~~~~~~~')
+        synthetic_data1 = pickle.load(open('../binary_data/synthetic_data/cgan/synthetic_binary_data', 'rb'))
+        synthetic_data2 = pickle.load(open('../binary_data/synthetic_data/ac_gan/synthetic_binary_data', 'rb'))
+
+        mixed_augmented_data = synthetic_data1.append(synthetic_data2)
+        filename = 'mixed'
+
+    if mixed:
+        augmented_data = train_data.append(mixed_augmented_data)
+        augmented_data = augmented_data.sample(frac=1)
+    else:
+        synthetic_data = synthetic_data.sample(frac=1)
+        augmented_data = train_data.append(synthetic_data)
+        augmented_data = augmented_data.sample(frac=1)
 
     y_train = augmented_data['label']
     print(augmented_data['label'].value_counts())
@@ -132,14 +169,14 @@ def train_on_augmented_data(cgan=True, ac_gan=False):
     y_train = y_train.astype('int')
     y_test = y_test.astype('int')
 
-    print('\n~~~~~~~~ Training Random Forest on Augmented data and test on old data ~~~~~~~~~~~~~~~')
-    acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_train, X_test, y_train, y_test, print_ROC=False)
+    #print('\n~~~~~~~~ Training Random Forest on Augmented data and test on old data ~~~~~~~~~~~~~~~')
+    #acc, prec, f1, rec, g_m, auc_score, pr_score = run_RF(X_train, X_test, y_train, y_test, print_ROC=False)
 
-    df = results_to_df(acc, prec, f1, rec, g_m, auc_score, pr_score, rf=True)
-    df.to_csv('train_on_augmented_'+filename+'_and_test_on_old_data_results.csv')
+    #df = results_to_df(acc, prec, f1, rec, g_m, auc_score, pr_score, rf=True)
+    #df.to_csv('train_on_augmented_'+filename+'_and_test_on_old_data_results.csv')
 
     ########## Test on new data #########
-    test_data_new = pickle.load(open('../binary_data/new_data', 'rb'))
+    test_data_new = pickle.load(open('../binary_data/new_data3', 'rb'))
 
     y_test_new = test_data_new['label']
     y_test_new = y_test_new.astype('int')
@@ -155,7 +192,11 @@ def train_on_augmented_data(cgan=True, ac_gan=False):
 
 
 print('------- Binary Bot Detection --------')
-train_on_old_data()
+#train_on_old_data()
+#train_on_augmented_data(cgan=False, ac_gan=False, mixed=True)
+#train_on_augmented_data(cgan=False, ac_gan=False, mixed=True)
+
+train_on_augmented_data(cgan=False, ac_gan=False, mixed=False, adasyn=True)
 # Train on Augmented Data
 # train_on_augmented_and_test_on_original_data(cgan=True)
 
