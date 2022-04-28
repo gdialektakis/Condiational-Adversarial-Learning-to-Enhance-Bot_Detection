@@ -1,4 +1,6 @@
 import time
+from math import sqrt
+
 import pandas as pd
 from sklearn import metrics
 from sklearn.svm import LinearSVC
@@ -6,6 +8,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import confusion_matrix
 from imblearn.metrics import geometric_mean_score
 import warnings
 
@@ -121,7 +124,15 @@ def evaluation_metrics(classifier, y_test, y_pred):
     f1.append(f1_score)
     recall = round(metrics.recall_score(y_test, y_pred, average='macro'), 5)
     rec.append(recall)
-    g_mean = round(geometric_mean_score(y_test, y_pred, average='macro'), 5)
+
+    tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+    sensitivity = tp/(tp+fn)
+    specificity = tn/(fp+tn)
+
+    g_mean = sqrt(sensitivity * specificity)
+
+    #g_mean = round(geometric_mean_score(y_test, y_pred, average='macro'), 5)
+    g_mean = round(g_mean, 5)
     g_m.append(g_mean)
 
     print('Results for {:}'.format(classifier))
