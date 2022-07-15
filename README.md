@@ -32,4 +32,6 @@ git clone https://github.com/gdialektakis/Conditional-Adversarial-Learning-to-En
 ## Publications
 
 If you decide to use this code for academic research, then please consider citing the following paper:
-* Dialektakis, George, Ilias Dimitriadis, and Athena Vakali. "CALEB: A Conditional Adversarial Learning Framework to Enhance Bot Detection." arXiv preprint arXiv:2205.15707 (2022) https://arxiv.org/abs/2205.15707.
+```
+Dialektakis, George, Ilias Dimitriadis, and Athena Vakali. "CALEB: A Conditional Adversarial Learning Framework to Enhance Bot Detection." arXiv preprint arXiv:2205.15707 (2022) https://arxiv.org/abs/2205.15707.
+```
