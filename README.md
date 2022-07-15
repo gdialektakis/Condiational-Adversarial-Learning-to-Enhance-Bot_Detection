@@ -13,7 +13,7 @@ Before you begin, ensure you have met the following requirements:
 First, clone the latest version of the project to any directory of your choice:
 
 ```
-git clone https://github.com/Autoencoders-compression-anomaly/Deep-Autoencoders-Data-Compression-GSoC-2021.git
+git clone https://github.com/gdialektakis/Conditional-Adversarial-Learning-to-Enhance-Bot_Detection.git
 ```
 
 ## Project Structure Description
